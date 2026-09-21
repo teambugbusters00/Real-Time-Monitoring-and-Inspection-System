@@ -8,6 +8,7 @@ on:
     paths:
       - 'capacitor.config.ts'
       - 'package.json'
+      - 'static/nirikshan_logo.jpg'
       - '.github/workflows/android-apk.yml'
 
 jobs:
@@ -32,6 +33,14 @@ jobs:
 
       - name: Add Android platform
         run: npx cap add android
+
+      - name: Prepare Nirikshan logo assets
+        run: |
+          mkdir -p resources
+          convert static/nirikshan_logo.jpg resources/logo.png
+
+      - name: Generate Android app icon and splash
+        run: npx @capacitor/assets generate --android --iconBackgroundColor '#082b59' --iconBackgroundColorDark '#082b59' --splashBackgroundColor '#082b59' --splashBackgroundColorDark '#082b59'
 
       - name: Sync Capacitor
         run: npx cap sync android
