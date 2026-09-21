@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: real-time-monitoring-inspection-system
+    runtime: python
+    plan: free
+    region: singapore
+    branch: main
+    buildCommand: pip install -r requirements.txt && python manage.py migrate && python manage.py collectstatic --noinput
+    startCommand: gunicorn dosje_backend.wsgi:application
+    autoDeploy: true
+    envVars:
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: real-time-monitoring-db
+          property: connectionString
+      - key: GEMINI_API_KEY
+        sync: false
+
+databases:
+  - name: real-time-monitoring-db
+    plan: free
+    region: singapore
