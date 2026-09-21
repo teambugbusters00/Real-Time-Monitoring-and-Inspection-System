@@ -37,7 +37,12 @@ jobs:
       - name: Prepare Nirikshan logo assets
         run: |
           mkdir -p resources
-          convert static/nirikshan_logo.jpg resources/logo.png
+          python -m pip install --disable-pip-version-check pillow
+          python - <<'PY'
+          from PIL import Image
+          image = Image.open("static/nirikshan_logo.jpg").convert("RGBA")
+          image.save("resources/logo.png")
+          PY
 
       - name: Generate Android app icon and splash
         run: npx @capacitor/assets generate --android --iconBackgroundColor '#082b59' --iconBackgroundColorDark '#082b59' --splashBackgroundColor '#082b59' --splashBackgroundColorDark '#082b59'
