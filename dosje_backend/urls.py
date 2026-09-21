@@ -41,7 +41,7 @@ from django.views.generic import TemplateView, RedirectView
 
 from accounts.views import CustomTokenObtainPairView, DivisionViewSet, NGOViewSet, UserViewSet, NGOLoginView
 
-from accounts.views import LogoutView, GoogleLoginView
+from accounts.views import LogoutView, GoogleLoginView, GoogleClientConfigView
 from django.conf import settings
 from django.conf.urls.static import static
 from projects.views import PublicProjectListView
@@ -68,6 +68,7 @@ urlpatterns = [
     path('api/auth/login-beneficiary/', BeneficiaryLoginView.as_view(), name='login_beneficiary'),
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),
     path('api/auth/google/', GoogleLoginView.as_view(), name='google_login'),
+    path('api/auth/google/config/', GoogleClientConfigView.as_view(), name='google_config'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/beneficiary/me/', BeneficiaryMeView.as_view(), name='beneficiary_me'),
     path('api/beneficiary/complaints/', BeneficiaryComplaintView.as_view(), name='beneficiary_complaint'),
