@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          # No package-lock.json is committed yet, so do not enable npm cache here.
 
       - name: Install dependencies
         run: npm install
