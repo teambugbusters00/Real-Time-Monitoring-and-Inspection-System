@@ -137,6 +137,7 @@ SIMPLE_JWT = {
 }
 
 GEMINI_API_KEY = env('GEMINI_API_KEY', default='')
+GOOGLE_CLIENT_ID = env('GOOGLE_CLIENT_ID', default='')
 
 # DEMO OVERRIDE: Increase session timeouts to 30 days
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
