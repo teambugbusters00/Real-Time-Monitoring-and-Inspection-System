@@ -376,3 +376,11 @@ class GoogleLoginView(APIView):
             'division_id': user.division.id if user.division else None,
             'ngo_id': user.ngo.id if user.ngo else None,
         }, status=status.HTTP_200_OK)
+
+
+class GoogleClientConfigView(APIView):
+    permission_classes = []
+
+    def get(self, request):
+        client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '')
+        return Response({'client_id': client_id})
