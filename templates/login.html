@@ -80,6 +80,14 @@
             </button>
         </form>
 
+        <!-- Google Sign-In -->
+        <div class="my-5 flex items-center gap-3">
+            <div class="h-px flex-1 bg-slate-200"></div>
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">or</span>
+            <div class="h-px flex-1 bg-slate-200"></div>
+        </div>
+        <div id="google-signin-button" class="flex justify-center"></div>
+
         <!-- Beneficiary Form -->
         <form id="loginForm-beneficiary" class="hidden space-y-4">
             <div>
@@ -147,6 +155,7 @@
     </div>
 </div>
 
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
     function switchTab(tab) {
         const errorDiv = document.getElementById('error-message');
@@ -178,6 +187,37 @@
         const errorDiv = document.getElementById('error-message');
         const successDiv = document.getElementById('success-message');
 
+        async function initGoogleSignIn() {
+            try {
+                const configResponse = await fetch('/api/auth/google/config/');
+                const config = await configResponse.json();
+
+                if (!config.client_id || !window.google) return;
+
+                google.accounts.id.initialize({
+                    client_id: config.client_id,
+                    callback: async (response) => {
+                        errorDiv.classList.add('hidden');
+                        await handleLoginRequest('/api/auth/google/', {
+                            credential: response.credential
+                        });
+                    }
+                });
+
+                google.accounts.id.renderButton(
+                    document.getElementById('google-signin-button'),
+                    {
+                        theme: 'outline',
+                        size: 'large',
+                        width: 340,
+                        text: 'continue_with'
+                    }
+                );
+            } catch (err) {
+                console.error('Google Sign-In initialization failed:', err);
+            }
+        }
+
         async function handleLoginRequest(url, payload) {
             try {
                 const response = await fetch(url, {
@@ -204,6 +244,15 @@
                 errorDiv.classList.remove('hidden');
             }
         }
+
+        const startGoogle = () => {
+            if (window.google) {
+                initGoogleSignIn();
+            } else {
+                setTimeout(startGoogle, 300);
+            }
+        };
+        startGoogle();
 
         document.getElementById('loginForm-staff').addEventListener('submit', (e) => {
             e.preventDefault();
