@@ -82,10 +82,7 @@ WSGI_APPLICATION = 'dosje_backend.wsgi.application'
 
 # Database
 DATABASES = {
-    'default': env.db(
-        'DATABASE_URL',
-        default=f"postgres://{env('DB_USER', default='postgres')}:{env('DB_PASSWORD', default='postgres')}@{env('DB_HOST', default='127.0.0.1')}:{env('DB_PORT', default='5432')}/{env('DB_NAME', default='dosje_db')}"
-    )
+    'default': env.db('DATABASE_URL')
 }
 
 # Custom User Model
