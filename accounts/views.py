@@ -303,3 +303,76 @@ class BeneficiaryLoginView(APIView):
             })
         except Beneficiary.DoesNotExist:
             return Response({'detail': 'No beneficiary found with this PAN and Phone number.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+
+from google.oauth2 import id_token
+from google.auth.transport import requests as google_requests
+
+class GoogleLoginView(APIView):
+    """
+    Accept a Google Identity Services ID token and exchange it for
+    the application's normal Django JWT. Only existing, active users
+    with a matching verified email can sign in with Google.
+    """
+    permission_classes = []
+
+    def post(self, request):
+        credential = request.data.get('credential')
+        if not credential:
+            return Response({'detail': 'Google credential is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '')
+        if not client_id:
+            return Response({'detail': 'Google authentication is not configured.'}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
+
+        try:
+            token_info = id_token.verify_oauth2_token(
+                credential,
+                google_requests.Request(),
+                client_id,
+            )
+        except ValueError:
+            return Response({'detail': 'Invalid or expired Google credential.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        if not token_info.get('email_verified'):
+            return Response({'detail': 'Google email is not verified.'}, status=status.HTTP_403_FORBIDDEN)
+
+        email = (token_info.get('email') or '').strip().lower()
+        users = User.objects.filter(email__iexact=email, is_active=True)
+
+        if not users.exists():
+            return Response(
+                {'detail': 'No active Nirikshan account is linked to this Google email.'},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if users.count() > 1:
+            return Response(
+                {'detail': 'Multiple Nirikshan accounts use this email. Contact an administrator.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        user = users.first()
+        refresh = RefreshToken.for_user(user)
+
+        AuditLog.log_event(
+            user=user,
+            action='google_login',
+            description=f'{user.username} signed in with Google.',
+            model_name='User',
+            object_id=user.id,
+        )
+
+        if user.role == 'inspector':
+            InspectorActivityLog.objects.filter(
+                inspector=user,
+                is_active=True
+            ).update(is_active=False, logout_time=timezone.now())
+            InspectorActivityLog.objects.create(inspector=user)
+
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'role': user.role,
+            'division_id': user.division.id if user.division else None,
+            'ngo_id': user.ngo.id if user.ngo else None,
+        }, status=status.HTTP_200_OK)
