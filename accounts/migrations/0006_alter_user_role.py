@@ -7,7 +7,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounts', '0005_auditlog_current_hash_auditlog_description_and_more'),
-        ('accounts', '0002_user_citizen_role'),
     ]
 
     operations = [
