@@ -31,6 +31,14 @@
                 </div>
 
                 <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Account Type</label>
+                    <select id="account_type" class="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                        <option value="nss_volunteer">NSS / Field Volunteer</option>
+                        <option value="citizen">Citizen</option>
+                    </select>
+                </div>
+
+                <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Email Address</label>
                     <input id="email" type="email" required autocomplete="email" placeholder="name@example.com"
                         class="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
@@ -50,7 +58,7 @@
 
                 <div class="text-[11px] text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-200">
                     Your email is the login ID. The password is stored securely as a hash in the database.
-                    Public self-registration creates an <strong>NSS Volunteer</strong> account.
+                    Public self-registration creates the selected <strong>NSS Volunteer or Citizen</strong> account.
                     Official, Inspector, NGO and Admin accounts are created/provisioned by administrators with the same email/password login.
                 </div>
 
@@ -89,6 +97,7 @@ document.getElementById('registerForm').addEventListener('submit', async (event)
                 first_name: document.getElementById('first_name').value.trim(),
                 last_name: document.getElementById('last_name').value.trim(),
                 email: document.getElementById('email').value.trim(),
+                account_type: document.getElementById('account_type').value,
                 password: document.getElementById('password').value,
                 confirm_password: document.getElementById('confirm_password').value
             })
