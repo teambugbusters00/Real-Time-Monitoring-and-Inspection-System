@@ -42,7 +42,7 @@ from django.views.generic import TemplateView, RedirectView
 
 from accounts.views import CustomTokenObtainPairView, DivisionViewSet, NGOViewSet, UserViewSet, NGOLoginView
 
-from accounts.views import LogoutView, GoogleLoginView, GoogleClientConfigView, UserRegistrationView, GeminiChatView
+from accounts.views import LogoutView, GoogleLoginView, GoogleClientConfigView, UserRegistrationView, GeminiChatView, DemoAuthView
 from django.conf import settings
 from django.conf.urls.static import static
 from projects.views import PublicProjectListView
@@ -66,6 +66,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/public/projects/', PublicProjectListView.as_view(), name='public_projects'),
     path('api/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/demo-login/', DemoAuthView.as_view(), name='demo_login'),
     path('api/auth/login-ngo/', NGOLoginView.as_view(), name='login_ngo'),
     path('api/auth/login-beneficiary/', BeneficiaryLoginView.as_view(), name='login_beneficiary'),
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),
