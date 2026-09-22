@@ -324,20 +324,55 @@ from .serializers import ComplaintSerializer
 
 class ComplaintViewSet(viewsets.ModelViewSet):
     serializer_class = ComplaintSerializer
-    permission_classes = [] # Publicly readable/writable (can be locked down if needed)
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        if not user.is_authenticated:
-            return Complaint.objects.all() # Public viewing of complaints? Or restrict? Let's return all.
-            
         if user.role == 'super_admin':
-            return Complaint.objects.all()
-        elif user.role in ['official', 'inspector', 'nss_volunteer']:
-            return Complaint.objects.filter(ngo__division=user.division)
-        elif user.role == 'ngo':
-            return Complaint.objects.filter(ngo=user.ngo)
-        return Complaint.objects.all()
+            return Complaint.objects.all().order_by('-created_at')
+        if user.role in ('official', 'inspector', 'nss_volunteer'):
+            return Complaint.objects.filter(ngo__division=user.division).order_by('-created_at')
+        if user.role == 'ngo':
+            return Complaint.objects.filter(ngo=user.ngo).order_by('-created_at')
+        if user.role == 'citizen':
+            return Complaint.objects.filter(submitted_by=user).order_by('-created_at')
+        return Complaint.objects.none()
+
+    def create(self, request, *args, **kwargs):
+        if request.user.role not in ('citizen', 'ngo'):
+            return Response({'detail': 'Only Citizens or NGOs can lodge a complaint/request.'}, status=status.HTTP_403_FORBIDDEN)
+
+        project_id = request.data.get('project')
+        if not project_id:
+            return Response({'detail': 'Project is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            project = Project.objects.select_related('ngo', 'division').get(pk=project_id)
+        except Project.DoesNotExist:
+            return Response({'detail': 'Selected project does not exist.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user.role == 'ngo' and project.ngo_id != request.user.ngo_id:
+            return Response({'detail': 'Selected project does not belong to your NGO.'}, status=status.HTTP_403_FORBIDDEN)
+
+        data = request.data.copy()
+        data['ngo'] = project.ngo_id
+        data['project'] = project.id
+        data['submitted_by'] = request.user.id
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        complaint = serializer.save(submitted_by=request.user)
+        from accounts.models import AuditLog
+        AuditLog.log_event(user=request.user, action='complaint_created', description=f'Complaint #{complaint.id} created.', model_name='Complaint', object_id=complaint.id, project=complaint.project)
+        return Response(self.get_serializer(complaint).data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, *args, **kwargs):
+        if request.user.role not in ('official', 'super_admin'):
+            return Response({'detail': 'Only Officials or Super Admins can update complaint status.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if request.user.role not in ('official', 'super_admin'):
+            return Response({'detail': 'Only Officials or Super Admins can update complaint status.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
 
 import jwt
 from django.conf import settings
