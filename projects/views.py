@@ -41,11 +41,34 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Only Super Admins and Officials can create projects.'}, status=403)
         return super().create(request, *args, **kwargs)
 
+    def perform_create(self, serializer):
+        project = serializer.validated_data.get('project')
+        if project is None:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': 'Project is required.'})
+        if project.division_id != project.ngo.division_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': 'Project division must match the NGO division.'})
+        if self.request.user.role == 'official' and project.division_id != self.request.user.division_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Project is outside your division.')
+        serializer.save()
+
     def update(self, request, *args, **kwargs):
         project = self.get_object()
         if not self._can_manage(request.user, project):
             return Response({'detail': 'You do not have permission to edit this project.'}, status=403)
         return super().update(request, *args, **kwargs)
+
+    def perform_update(self, serializer):
+        project = serializer.validated_data.get('project', serializer.instance)
+        if project.division_id != project.ngo.division_id:
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError({'detail': 'Project division must match the NGO division.'})
+        if self.request.user.role == 'official' and project.division_id != self.request.user.division_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Project is outside your division.')
+        serializer.save()
 
     def partial_update(self, request, *args, **kwargs):
         project = self.get_object()
