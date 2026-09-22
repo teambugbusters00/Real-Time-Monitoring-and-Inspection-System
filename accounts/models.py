@@ -22,6 +22,7 @@ class User(AbstractUser):
         ('inspector', 'Inspector'),
         ('ngo', 'NGO'),
         ('nss_volunteer', 'NSS Volunteer'),
+        ('citizen', 'Citizen'),
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
     division = models.ForeignKey(Division, on_delete=models.SET_NULL, null=True, blank=True)
