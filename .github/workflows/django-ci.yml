@@ -31,6 +31,14 @@ jobs:
           ALLOWED_HOSTS: localhost,127.0.0.1
         run: python manage.py check
 
+      - name: Run Django tests
+        env:
+          DEBUG: "False"
+          SECRET_KEY: ci-only-secret-key
+          DATABASE_URL: sqlite:///ci.sqlite3
+          ALLOWED_HOSTS: localhost,127.0.0.1
+        run: python manage.py test
+
       - name: Check migrations
         env:
           DEBUG: "False"
