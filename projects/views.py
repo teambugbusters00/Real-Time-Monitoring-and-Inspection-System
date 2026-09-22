@@ -2,8 +2,8 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import Project, Beneficiary, PurposeItem
-from .serializers import ProjectSerializer, BeneficiarySerializer, PurposeItemSerializer
+from .models import Project, Beneficiary, PurposeItem, CCTVCamera
+from .serializers import ProjectSerializer, BeneficiarySerializer, PurposeItemSerializer, CCTVCameraSerializer
 from accounts.permissions import IsSuperAdmin, IsOfficialOfDivision, IsOwnerNGO
 
 class ProjectViewSet(viewsets.ModelViewSet):
@@ -55,6 +55,43 @@ class ProjectViewSet(viewsets.ModelViewSet):
                 serializer.save()
                 return Response(serializer.data, status=201)
             return Response(serializer.errors, status=400)
+
+
+class CCTVCameraViewSet(viewsets.ModelViewSet):
+    """Manage project CCTV metadata without exposing cameras across divisions."""
+    serializer_class = CCTVCameraSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = CCTVCamera.objects.select_related('project').order_by('project_id', 'name')
+        if user.role == 'super_admin':
+            return qs
+        if user.role in ['official', 'inspector', 'nss_volunteer']:
+            return qs.filter(project__division=user.division)
+        if user.role == 'ngo':
+            return qs.filter(project__ngo=user.ngo)
+        return qs.none()
+
+    def perform_create(self, serializer):
+        if self.request.user.role not in ['super_admin', 'official', 'ngo']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only officials, super admins, or the owning NGO can add cameras.')
+        project = serializer.validated_data.get('project')
+        if self.request.user.role == 'official' and project.division_id != self.request.user.division_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Camera project is outside your division.')
+        if self.request.user.role == 'ngo' and project.ngo_id != self.request.user.ngo_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Camera project does not belong to your NGO.')
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if self.request.user.role not in ['super_admin', 'official', 'ngo']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only officials, super admins, or the owning NGO can edit cameras.')
+        serializer.save()
+
 
 class BeneficiaryViewSet(viewsets.ModelViewSet):
     serializer_class = BeneficiarySerializer
