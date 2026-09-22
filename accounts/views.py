@@ -363,7 +363,24 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
         leave.save()
         return Response({'detail': 'Leave rejected.'})
 
+    def update(self, request, *args, **kwargs):
+        if request.user.role in ('official', 'super_admin'):
+            allowed = set(request.data.keys()) - {'status'}
+            if allowed:
+                return Response({'detail': 'Officials and Super Admins may only change leave status.'}, status=400)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if request.user.role in ('official', 'super_admin'):
+            allowed = set(request.data.keys()) - {'status'}
+            if allowed:
+                return Response({'detail': 'Officials and Super Admins may only change leave status.'}, status=400)
+        return super().partial_update(request, *args, **kwargs)
+
     def perform_create(self, serializer):
+        if self.request.user.role != 'inspector':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only inspectors can apply for leave.')
         serializer.save(inspector=self.request.user)
 
 from .models import AuditLog
