@@ -639,7 +639,23 @@ class DutySwapRequestViewSet(viewsets.ModelViewSet):
         if self.request.user.role != 'inspector':
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Only inspectors can create duty swap requests.')
+        inspection = serializer.validated_data.get('inspection')
+        proposed = serializer.validated_data.get('proposed_inspector')
+        if not inspection or not inspection.inspectionassignment_set.filter(inspector=self.request.user).exists():
+            raise PermissionDenied('You can only request a swap for an inspection assigned to you.')
+        if not proposed or proposed.role != 'inspector' or proposed.division_id != self.request.user.division_id or not proposed.is_active:
+            raise PermissionDenied('The proposed inspector must be an active inspector in your division.')
         serializer.save(original_inspector=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        if request.user.role in ('official', 'super_admin') and set(request.data.keys()) - {'status'}:
+            return Response({'detail': 'Officials and Super Admins may only change duty swap status.'}, status=400)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if request.user.role in ('official', 'super_admin') and set(request.data.keys()) - {'status'}:
+            return Response({'detail': 'Officials and Super Admins may only change duty swap status.'}, status=400)
+        return super().partial_update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
         if self.request.user.role not in ['official', 'super_admin']:
