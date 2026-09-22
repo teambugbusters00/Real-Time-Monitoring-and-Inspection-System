@@ -24,7 +24,7 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
         # compatible role group; it can never change the stored role.
         if selected_role == 'staff' and self.user.role not in ('super_admin', 'official', 'inspector'):
             raise serializers.ValidationError({'detail': 'This account is not a staff account.'})
-        if selected_role in ('ngo', 'nss_volunteer') and self.user.role != selected_role:
+        if selected_role in ('ngo', 'nss_volunteer', 'citizen') and self.user.role != selected_role:
             raise serializers.ValidationError({'detail': 'The selected account type does not match this account.'})
 
         # Add extra responses here
