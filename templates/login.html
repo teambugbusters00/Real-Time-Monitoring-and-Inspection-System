@@ -65,8 +65,19 @@
 
         <!-- Staff Form -->
         <form id="loginForm-staff" class="space-y-4">
+            <div class="mb-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="demo_role">Demo Role</label>
+                <select id="demo_role" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm">
+                    <option value="nss_volunteer">NSS Volunteer</option>
+                    <option value="inspector">Inspector</option>
+                    <option value="official">Official</option>
+                    <option value="ngo">NGO</option>
+                    <option value="super_admin">Super Admin</option>
+                </select>
+                <p class="mt-1 text-[10px] text-amber-600">Demo mode only: backend must explicitly enable DEMO_AUTH_MODE.</p>
+            </div>
             <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="username">Username</label>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="username">Username / Email</label>
                 <input type="text" id="username" placeholder="Enter official ID"
                     class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm" required>
             </div>
@@ -271,11 +282,36 @@
         document.getElementById('loginForm-staff').addEventListener('submit', (e) => {
             e.preventDefault();
             errorDiv.classList.add('hidden');
-            const payload = {
-                username: document.getElementById('username').value,
-                password: document.getElementById('password').value
-            };
-            handleLoginRequest('/api/auth/login/', payload);
+            const emailOrUsername = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const role = document.getElementById('demo_role').value;
+            // Try demo auth first. If demo mode is disabled, fall back to normal username/password auth.
+            try {
+                const demoResponse = await fetch(apiUrl('/api/auth/demo-login/'), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: emailOrUsername, password, role })
+                });
+                if (demoResponse.status !== 404) {
+                    const demoText = await demoResponse.text();
+                    const demoData = demoText ? JSON.parse(demoText) : {};
+                    if (demoResponse.ok) {
+                        localStorage.setItem('access_token', demoData.access);
+                        localStorage.setItem('refresh_token', demoData.refresh);
+                        localStorage.setItem('role', demoData.role);
+                        if (demoData.division_id) localStorage.setItem('division_id', demoData.division_id);
+                        if (demoData.ngo_id) localStorage.setItem('ngo_id', demoData.ngo_id);
+                        redirectToDashboard(demoData.role);
+                        return;
+                    }
+                    errorDiv.textContent = demoData.detail || 'Demo login failed.';
+                    errorDiv.classList.remove('hidden');
+                    return;
+                }
+            } catch (err) {
+                // Normal login fallback below.
+            }
+            handleLoginRequest('/api/auth/login/', { username: emailOrUsername, password });
         });
 
         document.getElementById('loginForm-beneficiary').addEventListener('submit', (e) => {
