@@ -21,3 +21,5 @@ services:
         sync: false
       - key: RUN_MIGRATIONS_ON_STARTUP
         value: "true"
+      - key: RUN_SEED_DATA_ON_STARTUP
+        value: "true"
