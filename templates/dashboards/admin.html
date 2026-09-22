@@ -10,7 +10,7 @@
         </div>
         <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
             <a href="#" onclick="showSection('dashboard')" class="nav-link block px-4 py-3 rounded bg-blue-600 text-white font-medium transition">?? Overview</a>
-            <a href="#" onclick="showSection('audit')" class="nav-link block px-4 py-3 rounded text-slate-300 hover:bg-slate-800 hover:text-white transition">?? System Audit Log</a>
+            <a href="#" onclick="showSection('accounts')" class="nav-link block px-4 py-3 rounded text-slate-300 hover:bg-slate-800 hover:text-white transition">Account Management</a>\n            <a href="#" onclick="showSection('audit')" class="nav-link block px-4 py-3 rounded text-slate-300 hover:bg-slate-800 hover:text-white transition">?? System Audit Log</a>
         </nav>
         <div class="p-4 border-t border-slate-700">
             <button onclick="Auth.logout()" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-slate-300 rounded hover:bg-red-600 hover:text-white transition">Logout</button>
@@ -27,6 +27,34 @@
         <div id="sec-dashboard" class="content-section space-y-8">
             <div class="bg-white shadow p-6 rounded-xl border border-slate-200">
                 <p class="text-slate-600">Overview dashboard content...</p>
+            </div>
+        </div>
+
+        <!-- SECTION: Account Management -->\n        <div id="sec-accounts" class="content-section hidden space-y-8">
+            <div class="bg-white shadow p-6 rounded-xl border border-slate-200 max-w-4xl">
+                <h2 class="text-xl font-bold text-slate-800 mb-2">Create Account</h2>
+                <p class="text-sm text-slate-500 mb-6">Super Admin can create Staff, NGO, NSS Volunteer and Citizen accounts. Login is always email + password.</p>
+                <div id="account-message" class="hidden mb-4 p-3 rounded-lg text-sm font-medium"></div>
+                <form id="accountForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <input id="acc_first" class="border p-3 rounded-lg" placeholder="First name">
+                    <input id="acc_last" class="border p-3 rounded-lg" placeholder="Last name">
+                    <input id="acc_email" type="email" required class="border p-3 rounded-lg" placeholder="Email address">
+                    <input id="acc_phone" class="border p-3 rounded-lg" placeholder="Phone (optional)">
+                    <select id="acc_role" required class="border p-3 rounded-lg">
+                        <option value="">Select account type</option>
+                        <option value="super_admin">Super Admin / Admin</option>
+                        <option value="official">Official</option>
+                        <option value="inspector">Inspector</option>
+                        <option value="ngo">NGO</option>
+                        <option value="nss_volunteer">NSS / Field Volunteer</option>
+                        <option value="citizen">Citizen</option>
+                    </select>
+                    <select id="acc_division" class="border p-3 rounded-lg"><option value="">Select division</option></select>
+                    <select id="acc_ngo" class="border p-3 rounded-lg"><option value="">Select NGO (for NGO account)</option></select>
+                    <input id="acc_password" type="password" minlength="8" required class="border p-3 rounded-lg" placeholder="Password (min 8 chars)">
+                    <input id="acc_password2" type="password" minlength="8" required class="border p-3 rounded-lg" placeholder="Confirm password">
+                    <button class="md:col-span-2 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">Create Account</button>
+                </form>
             </div>
         </div>
 
@@ -142,7 +170,38 @@
         }
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+
+    async function loadAccountOptions() {
+        try {
+            const [divRes, ngoRes] = await Promise.all([Auth.fetchWithAuth('/api/divisions/'), Auth.fetchWithAuth('/api/ngos/')]);
+            const divisions = await divRes.json();
+            const ngos = await ngoRes.json();
+            document.getElementById('acc_division').innerHTML = '<option value="">Select division</option>' + divisions.map(d => '<option value="'+d.id+'">'+d.name+'</option>').join('');
+            document.getElementById('acc_ngo').innerHTML = '<option value="">Select NGO (for NGO account)</option>' + ngos.map(n => '<option value="'+n.id+'">'+n.name+' ('+n.registration_number+')</option>').join('');
+        } catch (e) { console.error(e); }
+    }
+
+    document.getElementById('accountForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const msg = document.getElementById('account-message');
+        msg.className = 'mb-4 p-3 rounded-lg text-sm font-medium bg-blue-50 text-blue-700';
+        msg.textContent = 'Creating account...';
+        msg.classList.remove('hidden');
+        if (document.getElementById('acc_password').value !== document.getElementById('acc_password2').value) {
+            msg.className = 'mb-4 p-3 rounded-lg text-sm font-medium bg-red-50 text-red-700'; msg.textContent = 'Passwords do not match.'; return;
+        }
+        try {
+            const res = await Auth.fetchWithAuth('/api/users/create-account/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+                first_name:document.getElementById('acc_first').value.trim(), last_name:document.getElementById('acc_last').value.trim(), email:document.getElementById('acc_email').value.trim(), phone:document.getElementById('acc_phone').value.trim(), role:document.getElementById('acc_role').value, division:document.getElementById('acc_division').value || null, ngo:document.getElementById('acc_ngo').value || null, password:document.getElementById('acc_password').value
+            })});
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.detail || 'Unable to create account.');
+            msg.className = 'mb-4 p-3 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700'; msg.textContent = 'Account created successfully for '+data.user.email+'.';
+            document.getElementById('accountForm').reset();
+        } catch(e) { msg.className = 'mb-4 p-3 rounded-lg text-sm font-medium bg-red-50 text-red-700'; msg.textContent = e.message; }
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {\n        loadAccountOptions();
         loadAuditLogs();
     });
 </script>
