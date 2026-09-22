@@ -6,6 +6,16 @@
     <title>DoSJE Monitoring System</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
+        // Render API base URL. Capacitor WebView can have a non-HTTP local origin,
+        // so auth/API calls must target the deployed Django service explicitly.
+        const API_BASE_URL = 'https://real-time-monitoring-inspection-system.onrender.com';
+
+        const apiUrl = (url) => {
+            if (!url) return API_BASE_URL;
+            if (/^https?:\/\//i.test(url)) return url;
+            return `${API_BASE_URL}${url.startsWith('/') ? url : `/${url}`}`;
+        };
+
         // Common Auth Utility
         const Auth = {
             getToken: () => localStorage.getItem('access_token'),
@@ -17,7 +27,7 @@
                 const token = Auth.getToken();
                 if (token) {
                     try {
-                        await fetch('/api/auth/logout/', {
+                        await fetch(apiUrl('/api/auth/logout/'), {
                             method: 'POST',
                             keepalive: true,
                             headers: {
@@ -76,7 +86,7 @@
                     options.headers['X-CSRFToken'] = csrftoken;
                 }
                 
-                let response = await fetch(url, options);
+                let response = await fetch(apiUrl(url), options);
                 
                 // Extremely simple 401 interceptor - in production we'd attempt token refresh here
                 if (response.status === 401) {
