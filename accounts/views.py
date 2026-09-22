@@ -118,12 +118,16 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             except NGO.DoesNotExist:
                 return Response({'detail': 'Selected NGO does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        if role in ('official', 'inspector') and division is None:
+            return Response({'detail': 'Official and Inspector accounts require a division.'}, status=status.HTTP_400_BAD_REQUEST)
         if role == 'ngo' and ngo is None:
             return Response({'detail': 'NGO account requires an NGO selection.'}, status=status.HTTP_400_BAD_REQUEST)
         if ngo and division and ngo.division_id != division.id:
             return Response({'detail': 'Selected NGO does not belong to the selected division.'}, status=status.HTTP_400_BAD_REQUEST)
         if role == 'ngo' and division is None:
             division = ngo.division
+        if role != 'ngo' and ngo_id:
+            return Response({'detail': 'NGO can only be linked to an NGO account.'}, status=status.HTTP_400_BAD_REQUEST)
 
         user = User(
             username=username,
