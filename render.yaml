@@ -19,3 +19,5 @@ services:
         sync: false
       - key: GOOGLE_CLIENT_ID
         sync: false
+      - key: RUN_MIGRATIONS_ON_STARTUP
+        value: "true"
