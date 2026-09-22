@@ -668,6 +668,12 @@ class DirectCallViewSet(viewsets.ModelViewSet):
             return DirectCall.objects.filter(ngo=user)
         return DirectCall.objects.none()
 
+    def update(self, request, *args, **kwargs):
+        return Response({'detail': 'Direct calls can only be ended; their routing and room cannot be edited.'}, status=405)
+
+    def partial_update(self, request, *args, **kwargs):
+        return Response({'detail': 'Direct calls can only be ended; their routing and room cannot be edited.'}, status=405)
+
     def perform_create(self, serializer):
         if self.request.user.role != 'official':
             from rest_framework.exceptions import PermissionDenied
