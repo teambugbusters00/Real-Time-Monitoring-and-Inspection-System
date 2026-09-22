@@ -3,6 +3,8 @@ from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User, Division, NGO, InspectorActivityLog, AuditLog
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    role = serializers.CharField(required=False, write_only=True)
+
     def validate(self, attrs):
         # Common login: users sign in with their registered email and password.
         # Keep username login compatible for existing accounts/API clients.
@@ -15,7 +17,15 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
             else:
                 attrs['username'] = user.username
 
+        selected_role = (attrs.get('role') or '').strip()
         data = super().validate(attrs)
+
+        # The database role is authoritative. A login tab can only request a
+        # compatible role group; it can never change the stored role.
+        if selected_role == 'staff' and self.user.role not in ('super_admin', 'official', 'inspector'):
+            raise serializers.ValidationError({'detail': 'This account is not a staff account.'})
+        if selected_role in ('ngo', 'nss_volunteer') and self.user.role != selected_role:
+            raise serializers.ValidationError({'detail': 'The selected account type does not match this account.'})
 
         # Add extra responses here
         data['role'] = self.user.role
