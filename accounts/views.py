@@ -182,6 +182,8 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
+        if request.user.role not in ['official', 'super_admin']:
+            return Response({'detail': 'Only an Official or Super Admin can approve leave.'}, status=403)
         leave = self.get_object()
         if leave.status != 'pending':
             return Response({'detail': 'Leave is already processed.'}, status=400)
@@ -228,6 +230,8 @@ class LeaveApplicationViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
+        if request.user.role not in ['official', 'super_admin']:
+            return Response({'detail': 'Only an Official or Super Admin can reject leave.'}, status=403)
         leave = self.get_object()
         leave.status = 'rejected'
         leave.save()
