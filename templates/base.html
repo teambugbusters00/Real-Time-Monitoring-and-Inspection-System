@@ -102,5 +102,157 @@
 <body class="bg-gray-50 min-h-screen text-gray-800">
     {% block content %}
     {% endblock %}
+
+    <!-- NIRIKSHAN Gemini AI Assistant: available across portal pages -->
+    <button id="nirikshanAiButton" type="button"
+        aria-label="Open NIRIKSHAN AI Assistant"
+        class="fixed bottom-5 right-5 z-[100] w-14 h-14 rounded-full bg-indigo-600 text-white shadow-2xl flex items-center justify-center text-2xl hover:bg-indigo-700 active:scale-95 transition-all">
+        ✦
+    </button>
+
+    <section id="nirikshanAiPanel"
+        class="hidden fixed bottom-24 right-4 z-[100] w-[calc(100vw-2rem)] max-w-sm h-[min(620px,75vh)] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+        <header class="bg-gradient-to-r from-blue-700 to-indigo-700 text-white px-4 py-3 flex items-center justify-between">
+            <div>
+                <div class="font-bold text-sm">NIRIKSHAN AI Assistant</div>
+                <div class="text-[10px] text-blue-100">Powered by Gemini</div>
+            </div>
+            <button id="nirikshanAiClose" type="button" class="text-white/80 hover:text-white text-xl" aria-label="Close AI Assistant">×</button>
+        </header>
+
+        <div id="nirikshanAiMessages" class="flex-1 overflow-y-auto p-3 space-y-3 bg-slate-50">
+            <div class="max-w-[88%] rounded-xl rounded-tl-sm bg-white border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm">
+                Hi! I’m the NIRIKSHAN AI Assistant. Ask me about the portal, inspections, reports, projects, or volunteer workflow.
+            </div>
+        </div>
+
+        <div class="border-t bg-white p-3">
+            <div id="nirikshanAiStatus" class="hidden text-[10px] text-slate-500 mb-2"></div>
+            <form id="nirikshanAiForm" class="flex gap-2">
+                <input id="nirikshanAiInput" type="text" maxlength="2000" autocomplete="off"
+                    placeholder="Ask NIRIKSHAN AI..."
+                    class="flex-1 min-w-0 px-3 py-2.5 text-sm border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <button id="nirikshanAiSend" type="submit"
+                    class="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-bold hover:bg-indigo-700 disabled:opacity-50">
+                    Send
+                </button>
+            </form>
+            <button id="nirikshanAiClear" type="button" class="mt-2 text-[10px] text-slate-400 hover:text-indigo-600">
+                Start new chat
+            </button>
+        </div>
+    </section>
+
+
+    <script>
+    (() => {
+        const button = document.getElementById('nirikshanAiButton');
+        const panel = document.getElementById('nirikshanAiPanel');
+        const close = document.getElementById('nirikshanAiClose');
+        const form = document.getElementById('nirikshanAiForm');
+        const input = document.getElementById('nirikshanAiInput');
+        const send = document.getElementById('nirikshanAiSend');
+        const messages = document.getElementById('nirikshanAiMessages');
+        const status = document.getElementById('nirikshanAiStatus');
+        const clear = document.getElementById('nirikshanAiClear');
+        const interactionKey = 'nirikshan_gemini_interaction_id';
+
+        if (!button || !panel) return;
+
+        const addMessage = (text, role) => {
+            const item = document.createElement('div');
+            item.className = role === 'user'
+                ? 'ml-auto max-w-[88%] rounded-xl rounded-tr-sm bg-indigo-600 text-white px-3 py-2 text-sm shadow-sm whitespace-pre-wrap'
+                : 'max-w-[88%] rounded-xl rounded-tl-sm bg-white border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm whitespace-pre-wrap';
+            item.textContent = text;
+            messages.appendChild(item);
+            messages.scrollTop = messages.scrollHeight;
+        };
+
+        const setBusy = (busy, text = '') => {
+            send.disabled = busy;
+            input.disabled = busy;
+            status.textContent = text;
+            status.classList.toggle('hidden', !text);
+        };
+
+        button.addEventListener('click', () => {
+            panel.classList.toggle('hidden');
+            if (!panel.classList.contains('hidden')) input.focus();
+        });
+
+        close.addEventListener('click', () => panel.classList.add('hidden'));
+
+        clear.addEventListener('click', () => {
+            localStorage.removeItem(interactionKey);
+            messages.innerHTML = '';
+            addMessage('New chat started. How can I help you?', 'assistant');
+            input.focus();
+        });
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const message = input.value.trim();
+            if (!message) return;
+
+            const token = localStorage.getItem('access_token');
+            if (!token) {
+                addMessage('Please sign in first to use NIRIKSHAN AI Assistant.', 'assistant');
+                return;
+            }
+
+            addMessage(message, 'user');
+            input.value = '';
+            setBusy(true, 'Gemini is thinking...');
+
+            try {
+                const response = await fetch(apiUrl('/api/ai/chat/'), {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + token
+                    },
+                    body: JSON.stringify({
+                        message,
+                        previous_interaction_id: localStorage.getItem(interactionKey) || ''
+                    })
+                });
+
+                const responseText = await response.text();
+                let data = {};
+                try {
+                    data = responseText ? JSON.parse(responseText) : {};
+                } catch (_) {
+                    throw new Error('Server returned an invalid response.');
+                }
+
+                if (response.status === 409) {
+                    localStorage.removeItem(interactionKey);
+                    addMessage('This chat session expired. Tap “Start new chat” and try again.', 'assistant');
+                    return;
+                }
+
+                if (response.status === 401) {
+                    addMessage('Your login session has expired. Please sign in again.', 'assistant');
+                    return;
+                }
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Gemini request failed.');
+                }
+
+                if (data.interaction_id) {
+                    localStorage.setItem(interactionKey, data.interaction_id);
+                }
+                addMessage(data.answer || 'I could not generate a response.', 'assistant');
+            } catch (error) {
+                addMessage(error.message || 'Unable to reach Gemini AI. Please try again.', 'assistant');
+            } finally {
+                setBusy(false);
+                input.focus();
+            }
+        });
+    })();
+    </script>
 </body>
 </html>
