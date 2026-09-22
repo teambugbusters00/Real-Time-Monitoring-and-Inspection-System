@@ -60,6 +60,7 @@ urlpatterns = [
     path('dashboard/inspector/', TemplateView.as_view(template_name='dashboards/inspector.html'), name='inspector_dashboard'),
     path('dashboard/ngo/', TemplateView.as_view(template_name='dashboards/ngo.html'), name='ngo_dashboard'),
     path('dashboard/nss/', TemplateView.as_view(template_name='dashboards/nss.html'), name='nss_dashboard'),
+    path('dashboard/citizen/', TemplateView.as_view(template_name='dashboards/citizen.html'), name='citizen_dashboard'),
     path('dashboard/beneficiary/', TemplateView.as_view(template_name='dashboards/beneficiary.html'), name='beneficiary_dashboard'),
 
     # API Routes
