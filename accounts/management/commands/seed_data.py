@@ -26,15 +26,58 @@ class Command(BaseCommand):
 
         # 3. Users
         users_data = [
-            # username, password, role, division, ngo
-            ("ai_official", "pw", "official", ranchi_div, None),
-            ("ai_inspector", "pw", "inspector", ranchi_div, None),
-            ("dhanbad_official", "pw", "official", dhanbad_div, None),
-            ("dhanbad_inspector", "pw", "inspector", dhanbad_div, None),
-            ("ngo_asha", "pw", "ngo", ranchi_div, asha_ngo),
+            ("rakesh_ranchi", "pw", "official", ranchi_div, None, "Rakesh", "Kumar"),
+            ("insp1_ranchi", "pw", "inspector", ranchi_div, None, "Amit", "Singh"),
+            ("insp2_ranchi", "pw", "inspector", ranchi_div, None, "Vikram", "Sharma"),
+            ("insp3_ranchi", "pw", "inspector", ranchi_div, None, "Rajesh", "Yadav"),
+            ("sanjay_dhanbad", "pw", "official", dhanbad_div, None, "Sanjay", "Verma"),
+            ("insp1_dhanbad", "pw", "inspector", dhanbad_div, None, "Rahul", "Das"),
+            ("insp2_dhanbad", "pw", "inspector", dhanbad_div, None, "Suresh", "Mahato"),
+            ("insp3_dhanbad", "pw", "inspector", dhanbad_div, None, "Prakash", "Tiwari"),
+            ("NGO-JH-001", "pw", "ngo", ranchi_div, None, "Pragati", "Foundation"),
+            ("NGO-JH-002", "pw", "ngo", ranchi_div, None, "Jan Vikas", "Samiti"),
+            ("NGO-JH-003", "pw", "ngo", ranchi_div, None, "Navjeevan", "Trust"),
+            ("NGO-JH-004", "pw", "ngo", ranchi_div, None, "Samarpan", "Society"),
+            ("NGO-JH-005", "pw", "ngo", ranchi_div, None, "Kalyan", "Kendra"),
+            ("NGO-JH-006", "pw", "ngo", dhanbad_div, None, "Gramin", "Seva"),
+            ("NGO-JH-007", "pw", "ngo", dhanbad_div, None, "Uday", "Society"),
+            ("NGO-JH-008", "pw", "ngo", dhanbad_div, None, "Asha", "Kiran"),
+            ("NGO-JH-009", "pw", "ngo", dhanbad_div, None, "Nirantar", "Vikas"),
+            ("NGO-JH-010", "pw", "ngo", dhanbad_div, None, "Sahyog", "Foundation"),
         ]
 
-        for username, password, role, div, ngo in users_data:
+        ngo_by_username = {
+            "NGO-JH-001": ("Pragati Foundation", "NGO-JH-001", ranchi_div),
+            "NGO-JH-002": ("Jan Vikas Samiti", "NGO-JH-002", ranchi_div),
+            "NGO-JH-003": ("Navjeevan Trust", "NGO-JH-003", ranchi_div),
+            "NGO-JH-004": ("Samarpan Society", "NGO-JH-004", ranchi_div),
+            "NGO-JH-005": ("Kalyan Kendra", "NGO-JH-005", ranchi_div),
+            "NGO-JH-006": ("Gramin Seva", "NGO-JH-006", dhanbad_div),
+            "NGO-JH-007": ("Uday Society", "NGO-JH-007", dhanbad_div),
+            "NGO-JH-008": ("Asha Kiran", "NGO-JH-008", dhanbad_div),
+            "NGO-JH-009": ("Nirantar Vikas", "NGO-JH-009", dhanbad_div),
+            "NGO-JH-010": ("Sahyog Foundation", "NGO-JH-010", dhanbad_div),
+        }
+        ngo_users = {}
+        for username, (ngo_name, registration_number, division) in ngo_by_username.items():
+            ngo, _ = NGO.objects.update_or_create(
+                registration_number=registration_number,
+                defaults={"name": ngo_name, "division": division},
+            )
+            ngo_users[username] = ngo
+
+        for username, password, role, div, ngo, first_name, last_name in users_data:
+            if role == "ngo":
+                ngo = ngo_users[username]
+            user, _ = User.objects.get_or_create(username=username)
+            user.set_password(password)
+            user.role = role
+            user.division = div
+            user.ngo = ngo
+            user.first_name = first_name
+            user.last_name = last_name
+            user.is_active = True
+            user.save()
             user, created = User.objects.get_or_create(username=username)
             if created or user.role != role:
                 user.set_password(password)
