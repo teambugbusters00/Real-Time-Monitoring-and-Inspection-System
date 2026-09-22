@@ -184,13 +184,16 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        // If already logged in, redirect to correct dashboard
-        const role = localStorage.getItem('role');
-        const token = localStorage.getItem('access_token');
-        if (token && role) redirectToDashboard(role);
+        // Login page is always explicit: never auto-login/auto-redirect.
+        // A user must enter username/password (or choose another login method).
 
         const errorDiv = document.getElementById('error-message');
         const successDiv = document.getElementById('success-message');
+
+        if (new URLSearchParams(window.location.search).get('registered') === '1') {
+            successDiv.textContent = 'Account created successfully. Please login with your new username and password.';
+            successDiv.classList.remove('hidden');
+        }
 
         async function initGoogleSignIn() {
             try {
