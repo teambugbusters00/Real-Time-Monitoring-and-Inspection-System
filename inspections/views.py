@@ -180,6 +180,26 @@ Return ONLY valid JSON (no markdown block, no extra text) as a list of objects w
             "errors": errors
         })
 
+    def create(self, request, *args, **kwargs):
+        if request.user.role not in ('super_admin', 'official'):
+            return Response({'detail': 'Only Super Admins or Officials can schedule inspections.'}, status=403)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        if request.user.role not in ('super_admin', 'official'):
+            return Response({'detail': 'Only Super Admins or Officials can edit inspections.'}, status=403)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if request.user.role not in ('super_admin', 'official'):
+            return Response({'detail': 'Only Super Admins or Officials can edit inspections.'}, status=403)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if request.user.role != 'super_admin':
+            return Response({'detail': 'Only Super Admins can delete inspections.'}, status=403)
+        return super().destroy(request, *args, **kwargs)
+
     def get_queryset(self):
         user = self.request.user
         if not user.is_authenticated:
@@ -196,7 +216,11 @@ Return ONLY valid JSON (no markdown block, no extra text) as a list of objects w
         return Inspection.objects.none()
 
     def perform_create(self, serializer):
-        # Save the inspection first
+        # Only an Official may schedule within their own division; Super Admin is unrestricted.
+        project = serializer.validated_data.get('project')
+        if self.request.user.role == 'official' and project.division_id != self.request.user.division_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Project is outside your division.')
         inspection = serializer.save(created_by=self.request.user)
 
         # Retrieve the project's division
@@ -371,6 +395,45 @@ Return ONLY valid JSON (no markdown block, no extra text) as a list of objects w
             AuditLog.log_event(user=request.user, action='inspection_started', description="Inspection Started. Eligible for Random Verification.", model_name='Inspection', object_id=inspection.id, inspection=inspection, project=inspection.project)
             
         return Response({'message': 'Inspection started.'})
+
+    @action(detail=True, methods=['get'], url_path='vc-room')
+    def vc_room(self, request, pk=None):
+        inspection = self.get_object()
+        assignment = inspection.inspectionassignment_set.select_related('inspector', 'official').first()
+        if not assignment or not assignment.jitsi_room_name:
+            return Response({'detail': 'No inspection video room is available.'}, status=404)
+
+        allowed = (
+            request.user.role == 'super_admin'
+            or (request.user.role == 'official' and assignment.official_id == request.user.id)
+            or (request.user.role == 'inspector' and assignment.inspector_id == request.user.id)
+            or (request.user.role == 'ngo' and inspection.project.ngo_id == request.user.ngo_id)
+        )
+        if not allowed:
+            return Response({'detail': 'You do not have access to this inspection video room.'}, status=403)
+
+        return Response({
+            'jitsi_room_name': assignment.jitsi_room_name,
+            'inspection_id': inspection.id,
+            'project_name': inspection.project.title,
+        })
+
+    @action(detail=False, methods=['get'], url_path='missed-calls')
+    def missed_calls(self, request):
+        if request.user.role not in ('official', 'super_admin'):
+            return Response({'detail': 'Only Officials or Super Admins can view missed calls.'}, status=403)
+        from .models import RandomVerificationEvent
+        qs = RandomVerificationEvent.objects.filter(status__in=['no_response', 'missed']).select_related('inspection__project', 'inspector')
+        if request.user.role == 'official':
+            qs = qs.filter(official=request.user)
+        return Response([{
+            'id': event.id,
+            'created_at': event.created_at,
+            'inspector_name': event.inspector.get_full_name() or event.inspector.username,
+            'project_name': event.inspection.project.title,
+            'status': event.status,
+            'attempt_number': event.attempt_number,
+        } for event in qs.order_by('-created_at')])
 
     @action(detail=False, methods=['post'], url_path='pick-random-active')
     def pick_random_active(self, request):
