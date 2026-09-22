@@ -40,7 +40,7 @@ router.register(r'disbursements', FundDisbursementViewSet, basename='disbursemen
 
 from django.views.generic import TemplateView, RedirectView
 
-from accounts.views import CustomTokenObtainPairView, DivisionViewSet, NGOViewSet, UserViewSet, NGOLoginView
+from accounts.views import CustomTokenObtainPairView, DivisionViewSet, NGOViewSet, UserViewSet
 
 from accounts.views import LogoutView, GoogleLoginView, GoogleClientConfigView, UserRegistrationView, GeminiChatView
 from django.conf import settings
@@ -66,7 +66,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/public/projects/', PublicProjectListView.as_view(), name='public_projects'),
     path('api/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/auth/login-ngo/', NGOLoginView.as_view(), name='login_ngo'),
     path('api/auth/login-beneficiary/', BeneficiaryLoginView.as_view(), name='login_beneficiary'),
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),
     path('api/auth/google/', GoogleLoginView.as_view(), name='google_login'),
