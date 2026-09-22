@@ -411,10 +411,14 @@
                 <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
                 Live Stream
             </h3>
-            <button onclick="closeCctvModal()" class="text-slate-400 hover:text-white transition">✖ Close</button>
+            <div class="flex items-center gap-2">
+                <button id="cctv-analysis-btn" onclick="analyzeCctv()" disabled class="text-xs font-bold bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-3 py-1.5 rounded">Run OpenCV Analysis</button>
+                <button onclick="closeCctvModal()" class="text-slate-400 hover:text-white transition">✖ Close</button>
+            </div>
         </div>
         <div class="bg-black w-full aspect-video flex justify-center items-center overflow-hidden">
             <img id="cctv-img" class="w-full h-full object-contain" alt="Live Camera Feed" />
+            <div id="cctv-analysis" class="text-xs text-slate-300 bg-slate-950 px-4 py-3 border-t border-slate-700">Waiting for camera...</div>
         </div>
     </div>
 </div>
@@ -561,7 +565,7 @@
                         if(c.is_working) {
                             activeCctv++;
                             cctvGrid.innerHTML += `
-                                <div onclick="openCctvModal('${c.stream_url}', '${c.name.replace(/'/g, "\\'")}')" 
+                                <div onclick="openCctvModal(${c.id}, '${c.name.replace(/'/g, "\\'")}')" 
                                      class="relative group cursor-pointer rounded-lg overflow-hidden border border-slate-200 bg-slate-800 aspect-video flex items-center justify-center shadow-sm">
                                     <div class="absolute inset-0 bg-slate-900 opacity-50 group-hover:opacity-30 transition"></div>
                                     <span class="text-white text-xs z-10 p-2 text-center font-medium">${c.name}</span>
@@ -656,7 +660,7 @@
                 if (i.status === 'pending') statusBadge = `<span class="text-yellow-600 font-bold">Pending</span>`;
                 
                 const cctvAction = proj && proj.cctv_stream_url 
-                    ? `<button onclick="openCctvModal('${proj.cctv_stream_url}', '${proj.title}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block"></span>CCTV</button>` 
+                    ? `<button onclick="openCctvModal(${proj.cameras[0].id}, '${proj.title}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block"></span>CCTV</button>` 
                     : '';
                     
                 const locationAction = `<button onclick="trackLocation(${i.id})" class="text-xs font-bold text-blue-600 hover:text-blue-800">📍 Track GPS</button>`;
@@ -789,19 +793,44 @@
         if (jitsiApi) { jitsiApi.dispose(); jitsiApi = null; }
     }
 
-    function openCctvModal(streamUrl, title) {
+    async function openCctvModal(cameraId, title) {
         document.getElementById('cctv-modal').classList.remove('hidden');
         document.getElementById('cctv-title').innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span> ${title}`;
+        document.getElementById('cctv-analysis').textContent = 'Live RTSP/MJPEG relay starting...';
         const img = document.getElementById('cctv-img');
-        img.src = streamUrl || '';
-        img.alt = title || 'CCTV stream';
-        if (!streamUrl) {
-            img.alt = 'No CCTV stream configured';
+        img.src = '';
+        try {
+            const res = await Auth.fetchWithAuth(`/api/cctv-cameras/${cameraId}/stream-token/`, {method: 'POST'});
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Unable to create stream token.');
+            img.src = `${apiUrl('/api/cctv-cameras/' + cameraId + '/stream/')}?token=${encodeURIComponent(data.token)}`;
+            window.activeCctvCameraId = cameraId;
+            document.getElementById('cctv-analysis-btn').disabled = false;
+        } catch (e) {
+            document.getElementById('cctv-analysis').textContent = 'CCTV relay unavailable: ' + e.message;
+            document.getElementById('cctv-analysis-btn').disabled = true;
         }
     }
+
+    async function analyzeCctv() {
+        const cameraId = window.activeCctvCameraId;
+        if (!cameraId) return;
+        const status = document.getElementById('cctv-analysis');
+        status.textContent = 'OpenCV analyzing live frames...';
+        try {
+            const res = await Auth.fetchWithAuth(`/api/cctv-cameras/${cameraId}/analyze/`, {method: 'POST'});
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Analysis failed.');
+            status.textContent = `OpenCV: ${data.health} | Frames ${data.frames_analyzed} | People max ${data.people_detected_max} | Motion ${data.motion_percent}% | Brightness ${data.average_brightness}`;
+        } catch (e) {
+            status.textContent = 'OpenCV analysis failed: ' + e.message;
+        }
+    }
+
     function closeCctvModal() {
         document.getElementById('cctv-modal').classList.add('hidden');
         document.getElementById('cctv-img').src = '';
+        window.activeCctvCameraId = null;
     }
 
     function openMapModal(lat, lng) {
