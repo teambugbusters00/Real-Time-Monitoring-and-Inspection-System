@@ -102,12 +102,18 @@ document.getElementById('registerForm').addEventListener('submit', async (event)
     };
 
     try {
-        const response = await fetch('/api/auth/register/', {
+        const response = await fetch(apiUrl('/api/auth/register/'), {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(payload)
         });
-        const data = await response.json();
+        const responseText = await response.text();
+        let data = {};
+        try {
+            data = responseText ? JSON.parse(responseText) : {};
+        } catch (parseError) {
+            throw new Error(`Server returned HTTP ${response.status} instead of JSON (${responseText.slice(0, 120)})`);
+        }
 
         if (!response.ok) {
             errorDiv.textContent = data.detail || 'Registration failed. Please check your details.';
