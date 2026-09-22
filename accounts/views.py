@@ -384,3 +384,91 @@ class GoogleClientConfigView(APIView):
     def get(self, request):
         client_id = getattr(settings, 'GOOGLE_CLIENT_ID', '')
         return Response({'client_id': client_id})
+
+
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.db import IntegrityError
+
+
+class UserRegistrationView(APIView):
+    """
+    Public self-registration for new NIRIKSHAN field users.
+    Privileged roles (official/inspector/admin/NGO) remain admin-provisioned.
+    """
+    permission_classes = []
+
+    def post(self, request):
+        username = (request.data.get('username') or '').strip()
+        first_name = (request.data.get('first_name') or '').strip()
+        last_name = (request.data.get('last_name') or '').strip()
+        email = (request.data.get('email') or '').strip().lower()
+        phone = (request.data.get('phone') or '').strip()
+        password = request.data.get('password') or ''
+        confirm_password = request.data.get('confirm_password') or ''
+
+        if not username or not first_name or not email or not phone or not password:
+            return Response(
+                {'detail': 'Username, first name, email, phone and password are required.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if len(username) < 4:
+            return Response({'detail': 'Username must be at least 4 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not email or '@' not in email:
+            return Response({'detail': 'Enter a valid email address.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not phone.isdigit() or len(phone) != 10:
+            return Response({'detail': 'Enter a valid 10-digit phone number.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if password != confirm_password:
+            return Response({'detail': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if User.objects.filter(username__iexact=username).exists():
+            return Response({'detail': 'Username is already registered.'}, status=status.HTTP_409_CONFLICT)
+
+        if User.objects.filter(email__iexact=email).exists():
+            return Response({'detail': 'Email is already registered.'}, status=status.HTTP_409_CONFLICT)
+
+        if User.objects.filter(phone=phone).exists():
+            return Response({'detail': 'Phone number is already registered.'}, status=status.HTTP_409_CONFLICT)
+
+        try:
+            validate_password(password)
+        except ValidationError as exc:
+            return Response({'detail': ' '.join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                phone=phone,
+                role='nss_volunteer',
+                is_active=True,
+            )
+            user.set_password(password)
+            user.save(update_fields=['password'])
+        except IntegrityError:
+            return Response({'detail': 'Unable to create account. Please try another username or email.'}, status=status.HTTP_409_CONFLICT)
+
+        AuditLog.log_event(
+            user=user,
+            action='user_registration',
+            description=f'New NIRIKSHAN user {user.username} registered.',
+            model_name='User',
+            object_id=user.id,
+        )
+
+        refresh = RefreshToken.for_user(user)
+
+        return Response({
+            'detail': 'Account created successfully.',
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'role': user.role,
+            'division_id': None,
+            'ngo_id': None,
+        }, status=status.HTTP_201_CREATED)
