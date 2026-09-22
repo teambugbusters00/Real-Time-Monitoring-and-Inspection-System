@@ -22,6 +22,7 @@
             getRole: () => localStorage.getItem('role'),
             getDivision: () => localStorage.getItem('division_id'),
             getNgo: () => localStorage.getItem('ngo_id'),
+            getRefreshToken: () => localStorage.getItem('refresh_token'),
             
             logout: async () => {
                 const token = Auth.getToken();
@@ -76,23 +77,43 @@
                 return cookieValue;
             },
             fetchWithAuth: async (url, options = {}) => {
-                const token = Auth.getToken();
-                if (!options.headers) options.headers = {};
-                if (token) {
-                    options.headers['Authorization'] = `Bearer ${token}`;
-                }
-                const csrftoken = Auth.getCookie('csrftoken');
-                if (csrftoken) {
-                    options.headers['X-CSRFToken'] = csrftoken;
-                }
-                
-                let response = await fetch(apiUrl(url), options);
-                
-                // Extremely simple 401 interceptor - in production we'd attempt token refresh here
+                const requestOptions = { ...options, headers: { ...(options.headers || {}) } };
+                const applyAuth = (token) => {
+                    if (token) requestOptions.headers['Authorization'] = `Bearer ${token}`;
+                    const csrftoken = Auth.getCookie('csrftoken');
+                    if (csrftoken) requestOptions.headers['X-CSRFToken'] = csrftoken;
+                };
+                applyAuth(Auth.getToken());
+
+                let response = await fetch(apiUrl(url), requestOptions);
+
+                // Refresh an expired access token once before forcing a logout.
                 if (response.status === 401) {
-                    Auth.logout();
+                    const refresh = Auth.getRefreshToken();
+                    if (refresh) {
+                        try {
+                            const refreshResponse = await fetch(apiUrl('/api/auth/refresh/'), {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({refresh})
+                            });
+                            if (refreshResponse.ok) {
+                                const refreshData = await refreshResponse.json();
+                                if (refreshData.access) {
+                                    localStorage.setItem('access_token', refreshData.access);
+                                    applyAuth(refreshData.access);
+                                    response = await fetch(apiUrl(url), requestOptions);
+                                }
+                            }
+                        } catch (e) {
+                            console.warn('Token refresh failed', e);
+                        }
+                    }
+                    if (response.status === 401) {
+                        await Auth.logout();
+                    }
                 }
-                
+
                 return response;
             }
         };
