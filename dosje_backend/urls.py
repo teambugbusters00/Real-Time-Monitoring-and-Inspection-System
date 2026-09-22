@@ -64,7 +64,10 @@ urlpatterns = [
     path('dashboard/beneficiary/', TemplateView.as_view(template_name='dashboards/beneficiary.html'), name='beneficiary_dashboard'),
 
     # API Routes
-    # NIRIKSHAN's supported admin surface is the role-based Super Admin portal.\n    # Keep Django's raw admin available separately for emergency/advanced use.\n    path('django-admin/', admin.site.urls),\n    re_path(r'^admin(?:/.*)?
+    # NIRIKSHAN's supported admin surface is the role-based Super Admin portal.
+    # Keep Django's raw admin available separately for emergency/advanced use.
+    path('django-admin/', admin.site.urls),
+    re_path(r'^admin(?:/.*)?$', RedirectView.as_view(url='/dashboard/admin/', permanent=False)),
     path('api/public/projects/', PublicProjectListView.as_view(), name='public_projects'),
     path('api/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/login-beneficiary/', BeneficiaryLoginView.as_view(), name='login_beneficiary'),
@@ -93,7 +96,6 @@ else:
 
 , RedirectView.as_view(url='/dashboard/admin/', permanent=False)),
     path('api/public/projects/', PublicProjectListView.as_view(), name='public_projects'),
-    path('api/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/login-beneficiary/', BeneficiaryLoginView.as_view(), name='login_beneficiary'),
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),
     path('api/auth/google/', GoogleLoginView.as_view(), name='google_login'),
