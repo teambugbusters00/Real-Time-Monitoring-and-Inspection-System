@@ -659,7 +659,7 @@
                 if (i.status === 'in_progress') statusBadge = `<span class="text-emerald-600 font-bold">In Progress</span>`;
                 if (i.status === 'pending') statusBadge = `<span class="text-yellow-600 font-bold">Pending</span>`;
                 
-                const cctvAction = proj && proj.cctv_stream_url 
+                const cctvAction = proj && proj.cameras && proj.cameras.length 
                     ? `<button onclick="openCctvModal(${proj.cameras[0].id}, '${proj.title}')" class="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-red-500 animate-pulse inline-block"></span>CCTV</button>` 
                     : '';
                     
