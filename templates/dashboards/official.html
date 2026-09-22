@@ -588,7 +588,7 @@
             if (res.ok) {
                 alert(`Risk scan complete: ${data.anomalies_created} new anomalies, ${data.anomalies_updated} refreshed.`);
                 await loadAnomalies();
-                await loadDashboardData();
+                await loadProjectsAndKPIs();
             } else {
                 alert(data.error || 'Risk scan failed.');
             }
