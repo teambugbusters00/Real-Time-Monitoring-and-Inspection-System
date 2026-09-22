@@ -194,7 +194,7 @@
 
         async function initGoogleSignIn() {
             try {
-                const configResponse = await fetch('/api/auth/google/config/');
+                const configResponse = await fetch(apiUrl('/api/auth/google/config/'));
                 const config = await configResponse.json();
 
                 if (!config.client_id || !window.google) return;
@@ -225,12 +225,18 @@
 
         async function handleLoginRequest(url, payload) {
             try {
-                const response = await fetch(url, {
+                const response = await fetch(apiUrl(url), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                const data = await response.json();
+                const responseText = await response.text();
+                let data = {};
+                try {
+                    data = responseText ? JSON.parse(responseText) : {};
+                } catch (parseError) {
+                    throw new Error(`Server returned HTTP ${response.status} instead of JSON (${responseText.slice(0, 120)})`);
+                }
                 
                 if (response.ok) {
                     localStorage.setItem('access_token', data.access);
