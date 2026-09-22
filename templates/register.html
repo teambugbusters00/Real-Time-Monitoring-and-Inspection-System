@@ -121,16 +121,18 @@ document.getElementById('registerForm').addEventListener('submit', async (event)
             return;
         }
 
-        localStorage.setItem('access_token', data.access);
-        localStorage.setItem('refresh_token', data.refresh);
-        localStorage.setItem('role', data.role);
+        // Registration must not log the user in automatically.
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('role');
+        localStorage.removeItem('nirikshan_gemini_interaction_id');
 
-        successDiv.textContent = 'Account created successfully. Opening your dashboard...';
+        successDiv.textContent = 'Account created successfully. Please login with your new username and password.';
         successDiv.classList.remove('hidden');
 
         setTimeout(() => {
-            window.location.href = '/dashboard/nss/';
-        }, 500);
+            window.location.href = '/login/?registered=1';
+        }, 900);
     } catch (error) {
         errorDiv.textContent = `Connection failed: ${error.message || 'Unable to reach server'}. Please check your internet connection and try again.`;
         errorDiv.classList.remove('hidden');
