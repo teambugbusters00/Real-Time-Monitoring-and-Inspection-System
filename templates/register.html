@@ -5,11 +5,11 @@
 <div class="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 flex flex-col items-center justify-center px-4 py-8">
     <div class="w-full max-w-md">
         <div class="text-center mb-6">
-            <div class="w-28 h-28 mx-auto mb-4 rounded-full overflow-hidden bg-white border-4 border-white/30 shadow-xl">
+            <div class="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden bg-white border-4 border-white/30 shadow-xl">
                 <img src="{% static 'nirikshan_logo.jpg' %}" alt="Nirikshan Logo" class="w-full h-full object-contain p-1">
             </div>
             <h1 class="text-3xl font-extrabold text-white tracking-wide">Create NIRIKSHAN Account</h1>
-            <p class="text-blue-100 text-sm mt-2">Register as an NSS / field volunteer</p>
+            <p class="text-blue-100 text-sm mt-2">Create your account with email and password</p>
         </div>
 
         <div class="bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/40">
@@ -20,7 +20,7 @@
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">First Name</label>
-                        <input id="first_name" type="text" required autocomplete="given-name"
+                        <input id="first_name" type="text" autocomplete="given-name"
                             class="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                     </div>
                     <div>
@@ -31,20 +31,8 @@
                 </div>
 
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Username</label>
-                    <input id="username" type="text" required minlength="4" autocomplete="username" placeholder="Choose a unique username"
-                        class="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Email</label>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Email Address</label>
                     <input id="email" type="email" required autocomplete="email" placeholder="name@example.com"
-                        class="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Mobile Number</label>
-                    <input id="phone" type="tel" required inputmode="numeric" maxlength="10" pattern="[0-9]{10}" placeholder="10-digit mobile number"
                         class="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                 </div>
 
@@ -56,12 +44,14 @@
 
                 <div>
                     <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Confirm Password</label>
-                    <input id="confirm_password" type="password" required autocomplete="new-password"
+                    <input id="confirm_password" type="password" required autocomplete="new-password" placeholder="Re-enter password"
                         class="w-full px-3 py-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
                 </div>
 
                 <div class="text-[11px] text-slate-500 bg-slate-50 rounded-lg p-3 border border-slate-200">
-                    New self-registered accounts are created as <strong>NSS Volunteer</strong>. Official, Inspector, NGO and Admin accounts are provisioned by administrators.
+                    Your email is the login ID. The password is stored securely as a hash in the database.
+                    Public self-registration creates an <strong>NSS Volunteer</strong> account.
+                    Official, Inspector, NGO and Admin accounts are created/provisioned by administrators with the same email/password login.
                 </div>
 
                 <button id="registerButton" type="submit"
@@ -91,50 +81,36 @@ document.getElementById('registerForm').addEventListener('submit', async (event)
     button.disabled = true;
     button.textContent = 'Creating Account...';
 
-    const payload = {
-        first_name: document.getElementById('first_name').value.trim(),
-        last_name: document.getElementById('last_name').value.trim(),
-        username: document.getElementById('username').value.trim(),
-        email: document.getElementById('email').value.trim(),
-        phone: document.getElementById('phone').value.trim(),
-        password: document.getElementById('password').value,
-        confirm_password: document.getElementById('confirm_password').value
-    };
-
     try {
         const response = await fetch(apiUrl('/api/auth/register/'), {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
+            body: JSON.stringify({
+                first_name: document.getElementById('first_name').value.trim(),
+                last_name: document.getElementById('last_name').value.trim(),
+                email: document.getElementById('email').value.trim(),
+                password: document.getElementById('password').value,
+                confirm_password: document.getElementById('confirm_password').value
+            })
         });
-        const responseText = await response.text();
+
+        const text = await response.text();
         let data = {};
         try {
-            data = responseText ? JSON.parse(responseText) : {};
+            data = text ? JSON.parse(text) : {};
         } catch (parseError) {
-            throw new Error(`Server returned HTTP ${response.status} instead of JSON (${responseText.slice(0, 120)})`);
+            throw new Error('Server returned HTTP ' + response.status + ' instead of JSON.');
         }
 
         if (!response.ok) {
-            errorDiv.textContent = data.detail || 'Registration failed. Please check your details.';
+            errorDiv.textContent = data.detail || data.non_field_errors?.[0] || 'Unable to create account.';
             errorDiv.classList.remove('hidden');
             return;
         }
 
-        // Registration must not log the user in automatically.
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('role');
-        localStorage.removeItem('nirikshan_gemini_interaction_id');
-
-        successDiv.textContent = 'Account created successfully. Please login with your new username and password.';
-        successDiv.classList.remove('hidden');
-
-        setTimeout(() => {
-            window.location.href = '/login/?registered=1';
-        }, 900);
+        window.location.href = '/login/?registered=1';
     } catch (error) {
-        errorDiv.textContent = `Connection failed: ${error.message || 'Unable to reach server'}. Please check your internet connection and try again.`;
+        errorDiv.textContent = error.message || 'Network error occurred. Please try again.';
         errorDiv.classList.remove('hidden');
     } finally {
         button.disabled = false;
