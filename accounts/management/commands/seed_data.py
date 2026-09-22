@@ -87,6 +87,8 @@ class Command(BaseCommand):
             ngo = ngos.get(ngo_registration)
             user, _ = User.objects.get_or_create(username=username)
             user.set_password(DEMO_PASSWORD)
+            # Common login uses a unique email identity for every seeded account.
+            user.email = f"{username.lower()}@nirikshan.local"
             user.role = role
             user.division = divisions[division_name]
             user.ngo = ngo
