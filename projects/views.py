@@ -2,6 +2,10 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.http import StreamingHttpResponse
+from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
+import cv2
+import time
 from .models import Project, Beneficiary, PurposeItem, CCTVCamera
 from .serializers import ProjectSerializer, BeneficiarySerializer, PurposeItemSerializer, CCTVCameraSerializer
 from accounts.permissions import IsSuperAdmin, IsOfficialOfDivision, IsOwnerNGO
@@ -72,6 +76,127 @@ class CCTVCameraViewSet(viewsets.ModelViewSet):
         if user.role == 'ngo':
             return qs.filter(project__ngo=user.ngo)
         return qs.none()
+
+    @action(detail=True, methods=['post'], url_path='stream-token')
+    def stream_token(self, request, pk=None):
+        """Issue a short-lived signed token so an <img> can consume the RTSP relay."""
+        camera = self.get_object()
+        signer = TimestampSigner(salt='nirikshan-cctv-stream')
+        token = signer.sign(f'{request.user.id}:{camera.id}')
+        return Response({'token': token, 'expires_in': 300})
+
+    @action(detail=True, methods=['get'], url_path='stream')
+    def stream(self, request, pk=None):
+        """Relay RTSP/HTTP camera input as browser-compatible MJPEG."""
+        camera = self.get_object()
+        token = request.query_params.get('token')
+        signer = TimestampSigner(salt='nirikshan-cctv-stream')
+        try:
+            value = signer.unsign(token or '', max_age=300)
+            user_id, camera_id = value.split(':', 1)
+            if str(camera.id) != camera_id:
+                raise BadSignature('Camera token mismatch')
+        except (BadSignature, SignatureExpired, ValueError):
+            return Response({'error': 'Invalid or expired CCTV stream token.'}, status=403)
+
+        if not camera.stream_url:
+            return Response({'error': 'Camera stream URL is not configured.'}, status=400)
+
+        cap = cv2.VideoCapture(camera.stream_url)
+        if not cap.isOpened():
+            cap.release()
+            return Response({
+                'error': 'CCTV source could not be opened from the Render server.',
+                'source': camera.stream_url.split('://', 1)[0]
+            }, status=502)
+
+        def frames():
+            try:
+                while True:
+                    ok, frame = cap.read()
+                    if not ok:
+                        break
+                    ok, encoded = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+                    if not ok:
+                        continue
+                    yield (b'--frame\\r\\n'
+                           b'Content-Type: image/jpeg\\r\\n\\r\\n' +
+                           encoded.tobytes() + b'\\r\\n')
+                    time.sleep(0.03)
+            finally:
+                cap.release()
+
+        response = StreamingHttpResponse(
+            frames(),
+            content_type='multipart/x-mixed-replace; boundary=frame'
+        )
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
+        response['X-Content-Type-Options'] = 'nosniff'
+        return response
+
+    @action(detail=True, methods=['post'], url_path='analyze')
+    def analyze(self, request, pk=None):
+        """Run lightweight OpenCV analytics on a live camera source."""
+        camera = self.get_object()
+        if not camera.stream_url:
+            return Response({'error': 'Camera stream URL is not configured.'}, status=400)
+
+        cap = cv2.VideoCapture(camera.stream_url)
+        if not cap.isOpened():
+            cap.release()
+            return Response({'error': 'OpenCV could not open the CCTV source from Render.'}, status=502)
+
+        hog = cv2.HOGDescriptor()
+        hog.setSVMDetector(cv2.HOGDescriptor_getDefaultPeopleDetector())
+
+        frames_seen = 0
+        people_max = 0
+        motion_samples = 0
+        motion_percent = 0.0
+        brightness_total = 0.0
+        previous_gray = None
+        started = time.time()
+
+        try:
+            while frames_seen < 12 and (time.time() - started) < 8:
+                ok, frame = cap.read()
+                if not ok:
+                    break
+                frames_seen += 1
+
+                small = cv2.resize(frame, (640, 360))
+                gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
+                brightness_total += float(gray.mean())
+
+                if previous_gray is not None:
+                    diff = cv2.absdiff(previous_gray, gray)
+                    _, threshold = cv2.threshold(diff, 25, 255, cv2.THRESH_BINARY)
+                    motion_samples += float((threshold > 0).mean() * 100)
+                previous_gray = gray
+
+                if frames_seen % 3 == 0:
+                    boxes, _ = hog.detectMultiScale(
+                        small,
+                        winStride=(8, 8),
+                        padding=(8, 8),
+                        scale=1.05
+                    )
+                    people_max = max(people_max, len(boxes))
+
+            avg_brightness = round(brightness_total / frames_seen, 2) if frames_seen else 0
+            avg_motion = round(motion_samples / max(1, frames_seen - 1), 2)
+            return Response({
+                'camera_id': camera.id,
+                'camera': camera.name,
+                'frames_analyzed': frames_seen,
+                'people_detected_max': people_max,
+                'motion_percent': avg_motion,
+                'average_brightness': avg_brightness,
+                'analysis_engine': 'OpenCV HOG + frame-difference',
+                'health': 'online' if frames_seen else 'offline',
+            })
+        finally:
+            cap.release()
 
     def perform_create(self, serializer):
         if self.request.user.role not in ['super_admin', 'official', 'ngo']:
