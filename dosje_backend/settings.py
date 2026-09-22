@@ -148,6 +148,8 @@ SIMPLE_JWT = {
 GEMINI_API_KEY = env('GEMINI_API_KEY', default='')
 GEMINI_CHAT_MODEL = env('GEMINI_CHAT_MODEL', default='gemini-3.8-flash')
 GOOGLE_CLIENT_ID = env('GOOGLE_CLIENT_ID', default='')
+# Explicit opt-in demo authentication. Keep false for real deployments.
+DEMO_AUTH_MODE = env.bool('DEMO_AUTH_MODE', default=False)
 
 # DEMO OVERRIDE: Increase session timeouts to 30 days
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
