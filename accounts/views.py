@@ -15,7 +15,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
             # Login successful, log activity if inspector
-            user = User.objects.get(username=request.data.get('username'))
+            identifier = (request.data.get('username') or '').strip()
+            user = User.objects.filter(email__iexact=identifier).first() if '@' in identifier else None
+            if user is None:
+                user = User.objects.get(username=identifier)
             from .models import AuditLog
             AuditLog.log_event(user=user, action="user_login", description=f"{user.username} logged in successfully.", model_name="User", object_id=user.id)
             if user.role == 'inspector':
