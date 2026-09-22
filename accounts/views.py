@@ -260,9 +260,17 @@ class LogoutView(APIView):
         from .models import AuditLog
         if user.is_authenticated:
             AuditLog.log_event(user=user, action="user_logout", description=f"{user.username} logged out.", model_name="User", object_id=user.id)
-        if user.role == 'inspector':
-            active_logs = InspectorActivityLog.objects.filter(inspector=user, is_active=True)
-            active_logs.update(logout_time=timezone.now(), is_active=False)
+            if user.role == 'inspector':
+                active_logs = InspectorActivityLog.objects.filter(inspector=user, is_active=True)
+                active_logs.update(logout_time=timezone.now(), is_active=False)
+
+        refresh_token = (request.data.get('refresh') or '').strip()
+        if refresh_token:
+            try:
+                RefreshToken(refresh_token).blacklist()
+            except Exception:
+                # Logout remains successful even if an already-invalid refresh token is supplied.
+                pass
         return Response({'detail': 'Logged out successfully.'}, status=status.HTTP_200_OK)
 
 from .serializers import InspectorActivityLogSerializer
