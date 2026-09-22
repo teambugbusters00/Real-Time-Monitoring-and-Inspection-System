@@ -560,9 +560,15 @@ class DutySwapRequestViewSet(viewsets.ModelViewSet):
         return DutySwapRequest.objects.none()
 
     def perform_create(self, serializer):
+        if self.request.user.role != 'inspector':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only inspectors can create duty swap requests.')
         serializer.save(original_inspector=self.request.user)
 
     def perform_update(self, serializer):
+        if self.request.user.role not in ['official', 'super_admin']:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only an Official or Super Admin can approve or reject duty swaps.')
         instance = serializer.save()
         # If official approves the swap, update the inspection assignment
         if instance.status == 'approved':
@@ -587,8 +593,16 @@ class DirectCallViewSet(viewsets.ModelViewSet):
         return DirectCall.objects.none()
 
     def perform_create(self, serializer):
+        if self.request.user.role != 'official':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only Officials can initiate NGO calls.')
+        ngo = serializer.validated_data.get('ngo')
+        if not ngo or ngo.role != 'ngo' or ngo.ngo_id != self.request.user.division_id:
+            # NGO.user is linked to an NGO whose division must match the official.
+            if not ngo or ngo.role != 'ngo' or not ngo.ngo or ngo.ngo.division_id != self.request.user.division_id:
+                raise PermissionDenied('NGO is outside your division.')
         import uuid
-        room_name = f"dosje-direct-{uuid.uuid4().hex[:8]}"
+        room_name = f"dosje-direct-{uuid.uuid4().hex[:16]}"
         serializer.save(official=self.request.user, room_name=room_name, status='ringing')
 
     @action(detail=True, methods=['post'], url_path='end')
