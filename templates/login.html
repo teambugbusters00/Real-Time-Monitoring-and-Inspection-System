@@ -30,6 +30,7 @@
         <div class="flex border-b mb-5" role="tablist" aria-label="Account type">
             <button id="tab-staff" type="button" class="flex-1 py-3 text-center text-[11px] font-bold text-blue-600 border-b-2 border-blue-600 uppercase tracking-wider" onclick="switchTab('staff')">Staff</button>
             <button id="tab-ngo" type="button" class="flex-1 py-3 text-center text-[11px] font-bold text-slate-400 border-b-2 border-transparent uppercase tracking-wider" onclick="switchTab('ngo')">NGO</button>
+            <button id="tab-citizen" type="button" class="flex-1 py-3 text-center text-[11px] font-bold text-slate-400 border-b-2 border-transparent uppercase tracking-wider" onclick="switchTab('citizen')">Citizen</button>
             <button id="tab-nss" type="button" class="flex-1 py-3 text-center text-[11px] font-bold text-slate-400 border-b-2 border-transparent uppercase tracking-wider" onclick="switchTab('nss')">NSS</button>
         </div>
 
@@ -77,7 +78,7 @@ let selectedTab = 'staff';
 
 function switchTab(tab) {
     selectedTab = tab;
-    const tabs = ['staff', 'ngo', 'nss'];
+    const tabs = ['staff', 'ngo', 'nss', 'citizen'];
     tabs.forEach((name) => {
         const button = document.getElementById('tab-' + name);
         const active = name === tab;
@@ -113,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 body: JSON.stringify({
                     username: document.getElementById('email').value.trim(),
                     password: document.getElementById('password').value,
-                    role: selectedTab === 'staff' ? 'staff' : selectedTab === 'ngo' ? 'ngo' : 'nss_volunteer'
+                    role: selectedTab === 'staff' ? 'staff' : selectedTab === 'ngo' ? 'ngo' : selectedTab === 'citizen' ? 'citizen' : 'nss_volunteer'
                 })
             });
 
@@ -143,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 case 'inspector': window.location.href = '/dashboard/inspector/'; break;
                 case 'ngo': window.location.href = '/dashboard/ngo/'; break;
                 case 'nss_volunteer': window.location.href = '/dashboard/nss/'; break;
+                case 'citizen': window.location.href = '/dashboard/citizen/'; break;
                 default: throw new Error('This account has no supported dashboard role.');
             }
         } catch (error) {
