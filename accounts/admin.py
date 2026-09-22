@@ -12,6 +12,19 @@ class CustomUserAdmin(UserAdmin):
     list_display = ('username', 'email', 'first_name', 'last_name', 'role', 'division', 'is_staff')
     list_filter = ('role', 'division', 'is_staff', 'is_superuser', 'is_active')
 
+@admin.register(Division)
+class DivisionAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name')
+    search_fields = ('name',)
+    ordering = ('name',)
+
+
+@admin.register(NGO)
+class NGOAdmin(admin.ModelAdmin):
+    list_display = ('id', 'name', 'registration_number', 'division')
+    list_filter = ('division',)
+    search_fields = ('name', 'registration_number')
+    ordering = ('name',)
+
+
 admin.site.register(User, CustomUserAdmin)
-admin.site.register(Division)
-admin.site.register(NGO)
