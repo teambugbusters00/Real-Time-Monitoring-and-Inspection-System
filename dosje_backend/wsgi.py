@@ -22,7 +22,7 @@ if os.environ.get('RUN_MIGRATIONS_ON_STARTUP', 'true').lower() in ('1', 'true', 
     call_command('migrate', interactive=False, verbosity=0)
 
 if os.environ.get('RUN_SEED_DATA_ON_STARTUP', 'false').lower() in ('1', 'true', 'yes', 'on'):
-    call_command('seed_data', interactive=False, verbosity=0)
+    call_command('seed_data', verbosity=0)
 
 from django.core.wsgi import get_wsgi_application
 
