@@ -72,6 +72,84 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         return User.objects.none()
 
     from rest_framework.decorators import action
+    @action(detail=False, methods=['post'], url_path='create-account')
+    def create_account(self, request):
+        if request.user.role != 'super_admin':
+            return Response({'detail': 'Only a Super Admin can create staff, NGO, NSS, or citizen accounts.'}, status=status.HTTP_403_FORBIDDEN)
+
+        email = (request.data.get('email') or '').strip().lower()
+        password = request.data.get('password') or ''
+        role = (request.data.get('role') or '').strip()
+        first_name = (request.data.get('first_name') or '').strip()
+        last_name = (request.data.get('last_name') or '').strip()
+        phone = (request.data.get('phone') or '').strip()
+        division_id = request.data.get('division')
+        ngo_id = request.data.get('ngo')
+
+        allowed_roles = {'super_admin', 'official', 'inspector', 'ngo', 'nss_volunteer', 'citizen'}
+        if role not in allowed_roles:
+            return Response({'detail': 'Invalid account type.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not email or '@' not in email:
+            return Response({'detail': 'A valid email address is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if len(password) < 8:
+            return Response({'detail': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+        if User.objects.filter(email__iexact=email).exists():
+            return Response({'detail': 'An account with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        username_base = email.split('@', 1)[0][:120] or 'user'
+        username = username_base
+        counter = 1
+        while User.objects.filter(username=username).exists():
+            suffix = f'-{counter}'
+            username = f'{username_base[:150-len(suffix)]}{suffix}'
+            counter += 1
+
+        division = None
+        if division_id:
+            try:
+                division = Division.objects.get(pk=division_id)
+            except Division.DoesNotExist:
+                return Response({'detail': 'Selected division does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        ngo = None
+        if ngo_id:
+            try:
+                ngo = NGO.objects.get(pk=ngo_id)
+            except NGO.DoesNotExist:
+                return Response({'detail': 'Selected NGO does not exist.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if role == 'ngo' and ngo is None:
+            return Response({'detail': 'NGO account requires an NGO selection.'}, status=status.HTTP_400_BAD_REQUEST)
+        if ngo and division and ngo.division_id != division.id:
+            return Response({'detail': 'Selected NGO does not belong to the selected division.'}, status=status.HTTP_400_BAD_REQUEST)
+        if role == 'ngo' and division is None:
+            division = ngo.division
+
+        user = User(
+            username=username,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            division=division,
+            ngo=ngo if role == 'ngo' else None,
+            phone=phone,
+            is_active=True,
+            is_staff=(role == 'super_admin'),
+            is_superuser=(role == 'super_admin'),
+        )
+        user.set_password(password)
+        user.save()
+
+        AuditLog.log_event(
+            user=request.user,
+            action='account_created',
+            description=f'Created {user.get_role_display()} account for {user.email}.',
+            model_name='User',
+            object_id=user.id,
+        )
+        return Response({'detail': 'Account created successfully.', 'user': UserSerializer(user).data}, status=status.HTTP_201_CREATED)
+
     @action(detail=False, methods=['get'])
     def available_inspectors(self, request):
         user = request.user
