@@ -206,6 +206,10 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
                 return Response({'detail': 'Invalid account role.'}, status=status.HTTP_400_BAD_REQUEST)
             if target.role == 'super_admin' and new_role != 'super_admin' and User.objects.filter(role='super_admin', is_active=True).count() <= 1:
                 return Response({'detail': 'At least one active Super Admin must remain.'}, status=status.HTTP_400_BAD_REQUEST)
+            if new_role in ('official', 'inspector') and target.division_id is None:
+                return Response({'detail': 'Official and Inspector accounts require a division.'}, status=status.HTTP_400_BAD_REQUEST)
+            if new_role == 'ngo' and target.ngo_id is None:
+                return Response({'detail': 'NGO accounts require an NGO link.'}, status=status.HTTP_400_BAD_REQUEST)
             target.role = new_role
             target.is_staff = new_role == 'super_admin'
             target.is_superuser = new_role == 'super_admin'
