@@ -342,24 +342,38 @@ class ComplaintViewSet(viewsets.ModelViewSet):
         if request.user.role not in ('citizen', 'ngo'):
             return Response({'detail': 'Only Citizens or NGOs can lodge a complaint/request.'}, status=status.HTTP_403_FORBIDDEN)
 
+        project = None
         project_id = request.data.get('project')
-        if not project_id:
-            return Response({'detail': 'Project is required.'}, status=status.HTTP_400_BAD_REQUEST)
-        try:
-            project = Project.objects.select_related('ngo', 'division').get(pk=project_id)
-        except Project.DoesNotExist:
-            return Response({'detail': 'Selected project does not exist.'}, status=status.HTTP_404_NOT_FOUND)
+        if project_id:
+            try:
+                project = Project.objects.select_related('ngo', 'division').get(pk=project_id)
+            except Project.DoesNotExist:
+                return Response({'detail': 'Selected project does not exist.'}, status=status.HTTP_404_NOT_FOUND)
 
-        if request.user.role == 'ngo' and project.ngo_id != request.user.ngo_id:
+        if request.user.role == 'citizen' and project is None:
+            return Response({'detail': 'Project is required for a citizen grievance.'}, status=status.HTTP_400_BAD_REQUEST)
+        if request.user.role == 'ngo' and project is not None and project.ngo_id != request.user.ngo_id:
             return Response({'detail': 'Selected project does not belong to your NGO.'}, status=status.HTTP_403_FORBIDDEN)
 
         data = request.data.copy()
-        data['ngo'] = project.ngo_id
-        data['project'] = project.id
-        data['submitted_by'] = request.user.id
+        data['ngo'] = project.ngo_id if project is not None else request.user.ngo_id
+        if project is not None:
+            data['project'] = project.id
+        data.pop('status', None)
+        data.pop('submitted_by', None)
+
+        beneficiary_id = data.get('beneficiary')
+        if beneficiary_id:
+            try:
+                beneficiary = Beneficiary.objects.get(pk=beneficiary_id)
+            except Beneficiary.DoesNotExist:
+                return Response({'detail': 'Selected beneficiary does not exist.'}, status=status.HTTP_404_NOT_FOUND)
+            if project is None or beneficiary.project_id != project.id or beneficiary.project.ngo_id != request.user.ngo_id:
+                return Response({'detail': 'Selected beneficiary is outside the allowed project.'}, status=status.HTTP_403_FORBIDDEN)
+
         serializer = self.get_serializer(data=data)
         serializer.is_valid(raise_exception=True)
-        complaint = serializer.save(submitted_by=request.user)
+        complaint = serializer.save(submitted_by=request.user, status='open')
         from accounts.models import AuditLog
         AuditLog.log_event(user=request.user, action='complaint_created', description=f'Complaint #{complaint.id} created.', model_name='Complaint', object_id=complaint.id, project=complaint.project)
         return Response(self.get_serializer(complaint).data, status=status.HTTP_201_CREATED)
