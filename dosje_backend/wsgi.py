@@ -21,6 +21,13 @@ django.setup()
 if os.environ.get('RUN_MIGRATIONS_ON_STARTUP', 'true').lower() in ('1', 'true', 'yes', 'on'):
     call_command('migrate', interactive=False, verbosity=0)
 
+# If Render provides DJANGO_SUPERUSER_* variables, create the admin account once.
+if os.environ.get('DJANGO_SUPERUSER_USERNAME') and os.environ.get('DJANGO_SUPERUSER_PASSWORD'):
+    try:
+        call_command('createsuperuser', interactive=False, verbosity=0)
+    except Exception:
+        pass
+
 if os.environ.get('RUN_SEED_DATA_ON_STARTUP', 'false').lower() in ('1', 'true', 'yes', 'on'):
     call_command('seed_data', verbosity=0)
 
