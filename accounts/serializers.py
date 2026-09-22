@@ -65,7 +65,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['id', 'username', 'role', 'first_name', 'last_name', 'email', 'phone', 'division', 'division_name', 'ngo', 'ngo_name']
+        fields = ['id', 'username', 'role', 'first_name', 'last_name', 'email', 'phone', 'division', 'division_name', 'ngo', 'ngo_name', 'is_active']
 
 class InspectorActivityLogSerializer(serializers.ModelSerializer):
     inspector_name = serializers.CharField(source='inspector.get_full_name', read_only=True)
