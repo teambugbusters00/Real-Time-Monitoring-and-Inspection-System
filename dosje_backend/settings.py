@@ -146,6 +146,7 @@ SIMPLE_JWT = {
 }
 
 GEMINI_API_KEY = env('GEMINI_API_KEY', default='')
+GEMINI_CHAT_MODEL = env('GEMINI_CHAT_MODEL', default='gemini-3.8-flash')
 GOOGLE_CLIENT_ID = env('GOOGLE_CLIENT_ID', default='')
 
 # DEMO OVERRIDE: Increase session timeouts to 30 days
