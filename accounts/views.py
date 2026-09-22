@@ -1,7 +1,7 @@
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
-from .serializers import CustomTokenObtainPairSerializer, DivisionSerializer, NGOSerializer, UserSerializer
+from .serializers import CustomTokenObtainPairSerializer, DivisionSerializer, NGOSerializer, UserSerializer, UserDirectorySerializer
 from .models import Division, NGO, User
 from .permissions import IsSuperAdmin
 
@@ -34,7 +34,7 @@ class DivisionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class NGOViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = NGOSerializer
-    permission_classes = [] # Public can view NGOs to file complaints
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
@@ -52,6 +52,11 @@ class NGOViewSet(viewsets.ReadOnlyModelViewSet):
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticated]
+
+    def get_serializer_class(self):
+        if self.request.user.role == 'super_admin':
+            return UserSerializer
+        return UserDirectorySerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -239,7 +244,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             if not has_active:
                 available.append(insp)
                 
-        serializer = self.get_serializer(available, many=True)
+        serializer = UserDirectorySerializer(available, many=True)
         return Response(serializer.data)
 
 from rest_framework.views import APIView
