@@ -419,9 +419,19 @@ class PublicProjectListView(APIView):
     def get(self, request):
         # Group by scheme title
         schemes = Project.objects.filter(status='active').values(
-            'scheme_name', 'title'
+            'id', 'scheme_name', 'title', 'ngo_id'
         ).annotate(
             total_allocated=Sum('fund_allocated'),
             ngo_count=Count('ngo', distinct=True)
         )
-        return Response(list(schemes))
+        return Response([
+            {
+                'project_id': item['id'],
+                'scheme_name': item['scheme_name'],
+                'title': item['title'],
+                'ngo_id': item['ngo_id'],
+                'total_allocated': item['total_allocated'],
+                'ngo_count': item['ngo_count'],
+            }
+            for item in schemes
+        ])
