@@ -410,7 +410,7 @@ class GeminiChatView(APIView):
             )
 
         payload = {
-            'model': env_chat_model if (env_chat_model := getattr(settings, 'GEMINI_CHAT_MODEL', 'gemini-3.8-flash')) else 'gemini-3.8-flash',
+            'model': getattr(settings, 'GEMINI_CHAT_MODEL', 'gemini-3.8-flash'),
             'input': message,
             'system_instruction': (
                 'You are NIRIKSHAN AI Assistant, the helpful in-app assistant for the '
@@ -431,7 +431,10 @@ class GeminiChatView(APIView):
         try:
             gemini_response = http_requests.post(
                 'https://generativelanguage.googleapis.com/v1beta/interactions',
-                params={'key': api_key},
+                headers={
+                    'x-goog-api-key': api_key,
+                    'Content-Type': 'application/json',
+                },
                 json=payload,
                 timeout=30,
             )
