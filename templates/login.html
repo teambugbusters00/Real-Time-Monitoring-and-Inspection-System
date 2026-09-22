@@ -43,18 +43,12 @@
             </div>
         </div>
 
-        <!-- Role Tabs -->
+        <!-- Common User Login -->
         <div class="flex border-b mb-6">
-            <button id="tab-staff" class="w-1/4 py-2 text-center text-[11px] font-bold text-blue-600 border-b-2 border-blue-600 transition-colors uppercase tracking-wider" onclick="switchTab('staff')">
-                Staff
+            <button id="tab-staff" class="w-1/2 py-2 text-center text-[11px] font-bold text-blue-600 border-b-2 border-blue-600 transition-colors uppercase tracking-wider" onclick="switchTab('staff')">
+                User Login
             </button>
-            <button id="tab-ngo" class="w-1/4 py-2 text-center text-[11px] font-bold text-gray-400 border-b-2 border-transparent hover:text-teal-600 transition-colors uppercase tracking-wider" onclick="switchTab('ngo')">
-                NGO
-            </button>
-            <button id="tab-nss" class="w-1/4 py-2 text-center text-[11px] font-bold text-gray-400 border-b-2 border-transparent hover:text-indigo-600 transition-colors uppercase tracking-wider" onclick="switchTab('nss')">
-                NSS
-            </button>
-            <button id="tab-beneficiary" class="w-1/4 py-2 text-center text-[11px] font-bold text-gray-400 border-b-2 border-transparent hover:text-orange-600 transition-colors uppercase tracking-wider" onclick="switchTab('beneficiary')">
+            <button id="tab-beneficiary" class="w-1/2 py-2 text-center text-[11px] font-bold text-gray-400 border-b-2 border-transparent hover:text-orange-600 transition-colors uppercase tracking-wider" onclick="switchTab('beneficiary')">
                 Citizen
             </button>
         </div>
@@ -65,21 +59,12 @@
 
         <!-- Staff Form -->
         <form id="loginForm-staff" class="space-y-4">
-            <div class="mb-2">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="demo_role">Demo Role</label>
-                <select id="demo_role" class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm">
-                    <option value="nss_volunteer">NSS Volunteer</option>
-                    <option value="inspector">Inspector</option>
-                    <option value="official">Official</option>
-                    <option value="ngo">NGO</option>
-                    <option value="super_admin">Super Admin</option>
-                </select>
-                <p class="mt-1 text-[10px] text-amber-600">Demo mode only: backend must explicitly enable DEMO_AUTH_MODE.</p>
-            </div>
             <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="username">Username / Email</label>
-                <input type="text" id="username" placeholder="Enter official ID"
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="username">Email Address</label>
+                <input type="email" id="username" placeholder="Enter your registered email"
+                    autocomplete="email"
                     class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm" required>
+                <p class="mt-1 text-[10px] text-slate-500">One common login for Official, Inspector, NGO, NSS and Admin accounts.</p>
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="password">Password</label>
@@ -121,40 +106,6 @@
             </button>
         </form>
 
-        <!-- NGO Form -->
-        <form id="loginForm-ngo" class="hidden space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="ngo_name">NGO Name</label>
-                <input type="text" id="ngo_name" placeholder="Exact registered name"
-                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all text-sm" required>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="registration_number">Registration Number</label>
-                <input type="text" id="registration_number" placeholder="Registration ID"
-                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all text-sm" required>
-            </div>
-            <button type="submit" class="w-full px-6 py-3 mt-2 text-white bg-teal-600 rounded-lg hover:bg-teal-700 shadow-md shadow-teal-600/20 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 font-bold transition-all">
-                Login as NGO Partner
-            </button>
-        </form>
-
-        <!-- NSS Form -->
-        <form id="loginForm-nss" class="hidden space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="nss_username">Username</label>
-                <input type="text" id="nss_username" placeholder="Volunteer ID"
-                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" required>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="nss_password">Password</label>
-                <input type="password" id="nss_password" placeholder="Password"
-                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm" required>
-            </div>
-            <button type="submit" class="w-full px-6 py-3 mt-2 text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-600/20 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 font-bold transition-all">
-                Login as NSS Mitra
-            </button>
-        </form>
-
     </div>
     
     <!-- Footer aligned to bottom -->
@@ -180,17 +131,17 @@
         successDiv.classList.add('hidden');
 
         // Reset all tabs
-        ['staff', 'ngo', 'nss', 'beneficiary'].forEach(t => {
+        ['staff', 'beneficiary'].forEach(t => {
             document.getElementById(`tab-${t}`).className = `w-1/4 py-2 text-center text-[11px] font-bold border-b-2 transition-colors uppercase tracking-wider text-gray-400 border-transparent hover:text-${t==='staff'?'blue':t==='ngo'?'teal':t==='nss'?'indigo':'orange'}-600`;
-            const form = document.getElementById(t === 'staff' ? 'loginForm-staff' : (t === 'ngo' ? 'loginForm-ngo' : (t === 'nss' ? 'loginForm-nss' : 'loginForm-beneficiary')));
+            const form = document.getElementById(t === 'staff' ? 'loginForm-staff' : 'loginForm-beneficiary');
             form.classList.add('hidden');
         });
 
         // Activate selected tab
-        const color = tab === 'beneficiary' ? 'orange' : (tab === 'nss' ? 'indigo' : (tab === 'ngo' ? 'teal' : 'blue'));
+        const color = tab === 'beneficiary' ? 'orange' : 'blue';
         document.getElementById(`tab-${tab}`).className = `w-1/4 py-2 text-center text-[11px] font-bold border-b-2 transition-colors uppercase tracking-wider text-${color}-600 border-${color}-600`;
         
-        const activeForm = document.getElementById(tab === 'staff' ? 'loginForm-staff' : (tab === 'ngo' ? 'loginForm-ngo' : (tab === 'nss' ? 'loginForm-nss' : 'loginForm-beneficiary')));
+        const activeForm = document.getElementById(tab === 'staff' ? 'loginForm-staff' : 'loginForm-beneficiary');
         activeForm.classList.remove('hidden');
     }
 
@@ -282,36 +233,9 @@
         document.getElementById('loginForm-staff').addEventListener('submit', (e) => {
             e.preventDefault();
             errorDiv.classList.add('hidden');
-            const emailOrUsername = document.getElementById('username').value.trim();
+            const email = document.getElementById('username').value.trim();
             const password = document.getElementById('password').value;
-            const role = document.getElementById('demo_role').value;
-            // Try demo auth first. If demo mode is disabled, fall back to normal username/password auth.
-            try {
-                const demoResponse = await fetch(apiUrl('/api/auth/demo-login/'), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: emailOrUsername, password, role })
-                });
-                if (demoResponse.status !== 404) {
-                    const demoText = await demoResponse.text();
-                    const demoData = demoText ? JSON.parse(demoText) : {};
-                    if (demoResponse.ok) {
-                        localStorage.setItem('access_token', demoData.access);
-                        localStorage.setItem('refresh_token', demoData.refresh);
-                        localStorage.setItem('role', demoData.role);
-                        if (demoData.division_id) localStorage.setItem('division_id', demoData.division_id);
-                        if (demoData.ngo_id) localStorage.setItem('ngo_id', demoData.ngo_id);
-                        redirectToDashboard(demoData.role);
-                        return;
-                    }
-                    errorDiv.textContent = demoData.detail || 'Demo login failed.';
-                    errorDiv.classList.remove('hidden');
-                    return;
-                }
-            } catch (err) {
-                // Normal login fallback below.
-            }
-            handleLoginRequest('/api/auth/login/', { username: emailOrUsername, password });
+            handleLoginRequest('/api/auth/login/', { username: email, password });
         });
 
         document.getElementById('loginForm-beneficiary').addEventListener('submit', (e) => {
@@ -324,25 +248,7 @@
             handleLoginRequest('/api/auth/login-beneficiary/', payload);
         });
 
-        document.getElementById('loginForm-nss').addEventListener('submit', (e) => {
-            e.preventDefault();
-            errorDiv.classList.add('hidden');
-            const payload = {
-                username: document.getElementById('nss_username').value,
-                password: document.getElementById('nss_password').value
-            };
-            handleLoginRequest('/api/auth/login/', payload);
-        });
 
-        document.getElementById('loginForm-ngo').addEventListener('submit', (e) => {
-            e.preventDefault();
-            errorDiv.classList.add('hidden');
-            const payload = {
-                ngo_name: document.getElementById('ngo_name').value,
-                registration_number: document.getElementById('registration_number').value
-            };
-            handleLoginRequest('/api/auth/login-ngo/', payload);
-        });
 
         function redirectToDashboard(userRole) {
             switch(userRole) {
