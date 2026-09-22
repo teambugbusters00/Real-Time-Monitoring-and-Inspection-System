@@ -1,208 +1,318 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block content %}
-<div class="flex h-screen bg-slate-50 overflow-hidden">
-    <!-- Sidebar -->
-    <aside class="w-64 bg-slate-900 text-white flex flex-col hidden md:flex">
-        <div class="p-6 border-b border-slate-700">
-            <h1 class="text-2xl font-bold tracking-tight text-white">DoSJE</h1>
-            <p class="text-slate-400 text-sm mt-1">Super Admin</p>
+<div class="min-h-screen bg-slate-50 flex">
+    <aside class="w-72 bg-slate-950 text-white hidden md:flex flex-col">
+        <div class="p-6 border-b border-slate-800">
+            <div class="text-2xl font-black tracking-tight">NIRIKSHAN</div>
+            <div class="text-slate-400 text-sm mt-1">Super Admin Console</div>
         </div>
-        <nav class="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
-            <a href="#" onclick="showSection('dashboard')" class="nav-link block px-4 py-3 rounded bg-blue-600 text-white font-medium transition">?? Overview</a>
-            <a href="#" onclick="showSection('accounts')" class="nav-link block px-4 py-3 rounded text-slate-300 hover:bg-slate-800 hover:text-white transition">Account Management</a>\n            <a href="#" onclick="showSection('audit')" class="nav-link block px-4 py-3 rounded text-slate-300 hover:bg-slate-800 hover:text-white transition">?? System Audit Log</a>
+        <nav class="flex-1 p-4 space-y-2">
+            <button data-section="overview" class="admin-nav w-full text-left px-4 py-3 rounded-lg bg-blue-600 text-white font-semibold">Overview</button>
+            <button data-section="accounts" class="admin-nav w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800">Account Management</button>
+            <button data-section="audit" class="admin-nav w-full text-left px-4 py-3 rounded-lg text-slate-300 hover:bg-slate-800">System Audit Log</button>
         </nav>
-        <div class="p-4 border-t border-slate-700">
-            <button onclick="Auth.logout()" class="w-full flex items-center justify-center gap-2 px-4 py-2 bg-slate-800 text-slate-300 rounded hover:bg-red-600 hover:text-white transition">Logout</button>
+        <div class="p-4 border-t border-slate-800">
+            <button onclick="Auth.logout()" class="w-full px-4 py-3 rounded-lg bg-slate-800 hover:bg-red-600 transition font-semibold">Logout</button>
         </div>
     </aside>
 
-    <!-- Main Content -->
-    <main class="flex-1 overflow-y-auto p-4 md:p-8">
-        <header class="flex justify-between items-center mb-8">
-            <div><h2 class="text-3xl font-black text-slate-800 tracking-tight">Admin Operations</h2></div>
-        </header>
-
-        <!-- SECTION: Dashboard -->
-        <div id="sec-dashboard" class="content-section space-y-8">
-            <div class="bg-white shadow p-6 rounded-xl border border-slate-200">
-                <p class="text-slate-600">Overview dashboard content...</p>
-            </div>
-        </div>
-
-        <!-- SECTION: Account Management -->\n        <div id="sec-accounts" class="content-section hidden space-y-8">
-            <div class="bg-white shadow p-6 rounded-xl border border-slate-200 max-w-4xl">
-                <h2 class="text-xl font-bold text-slate-800 mb-2">Create Account</h2>
-                <p class="text-sm text-slate-500 mb-6">Super Admin can create Staff, NGO, NSS Volunteer and Citizen accounts. Login is always email + password.</p>
-                <div id="account-message" class="hidden mb-4 p-3 rounded-lg text-sm font-medium"></div>
-                <form id="accountForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input id="acc_first" class="border p-3 rounded-lg" placeholder="First name">
-                    <input id="acc_last" class="border p-3 rounded-lg" placeholder="Last name">
-                    <input id="acc_email" type="email" required class="border p-3 rounded-lg" placeholder="Email address">
-                    <input id="acc_phone" class="border p-3 rounded-lg" placeholder="Phone (optional)">
-                    <select id="acc_role" required class="border p-3 rounded-lg">
-                        <option value="">Select account type</option>
-                        <option value="super_admin">Super Admin / Admin</option>
-                        <option value="official">Official</option>
-                        <option value="inspector">Inspector</option>
-                        <option value="ngo">NGO</option>
-                        <option value="nss_volunteer">NSS / Field Volunteer</option>
-                        <option value="citizen">Citizen</option>
-                    </select>
-                    <select id="acc_division" class="border p-3 rounded-lg"><option value="">Select division</option></select>
-                    <select id="acc_ngo" class="border p-3 rounded-lg"><option value="">Select NGO (for NGO account)</option></select>
-                    <input id="acc_password" type="password" minlength="8" required class="border p-3 rounded-lg" placeholder="Password (min 8 chars)">
-                    <input id="acc_password2" type="password" minlength="8" required class="border p-3 rounded-lg" placeholder="Confirm password">
-                    <button class="md:col-span-2 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">Create Account</button>
-                </form>
-            </div>
-        </div>
-
-        <!-- SECTION: Audit Log -->
-        <div id="sec-audit" class="content-section hidden space-y-8">
-            <div class="bg-white shadow p-6 rounded-xl border border-slate-200">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-xl font-bold text-slate-800">System Audit Log</h2>
-                    <button onclick="verifyAuditChain()" class="bg-blue-600 text-white px-5 py-2 rounded-lg font-medium hover:bg-blue-700 transition flex items-center gap-2">
-                        Verify Audit Chain
-                    </button>
+    <main class="flex-1 min-w-0 p-4 md:p-8 overflow-y-auto">
+        <div class="max-w-7xl mx-auto">
+            <header class="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <div class="text-sm font-semibold text-blue-600">SYSTEM ADMINISTRATION</div>
+                    <h1 class="text-3xl md:text-4xl font-black text-slate-900 mt-1">Admin Operations</h1>
+                    <p class="text-slate-500 mt-2">Manage NIRIKSHAN accounts, access and audit history from one place.</p>
                 </div>
-                <div id="audit-verify-banner" class="hidden mb-6 p-4 rounded-lg font-bold text-lg"></div>
-                <div class="flex gap-4 mb-6">
-                    <input type="date" id="audit-start" class="border border-slate-300 p-2 rounded">
-                    <input type="date" id="audit-end" class="border border-slate-300 p-2 rounded">
-                    <button onclick="loadAuditLogs()" class="bg-slate-800 text-white px-4 py-2 rounded hover:bg-slate-900 transition">Filter</button>
+                <button onclick="refreshAll()" class="px-4 py-2.5 rounded-lg bg-slate-900 text-white font-semibold hover:bg-slate-800">Refresh</button>
+            </header>
+
+            <div id="global-message" class="hidden mb-6 p-4 rounded-lg text-sm font-semibold"></div>
+
+            <section id="section-overview" class="admin-section space-y-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><div class="text-xs uppercase text-slate-400 font-bold">Users</div><div id="stat-users" class="text-3xl font-black text-slate-900 mt-2">—</div></div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><div class="text-xs uppercase text-slate-400 font-bold">Officials</div><div id="stat-officials" class="text-3xl font-black text-slate-900 mt-2">—</div></div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><div class="text-xs uppercase text-slate-400 font-bold">Inspectors</div><div id="stat-inspectors" class="text-3xl font-black text-slate-900 mt-2">—</div></div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><div class="text-xs uppercase text-slate-400 font-bold">NGOs</div><div id="stat-ngos" class="text-3xl font-black text-slate-900 mt-2">—</div></div>
+                    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm"><div class="text-xs uppercase text-slate-400 font-bold">Projects</div><div id="stat-projects" class="text-3xl font-black text-slate-900 mt-2">—</div></div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left text-sm text-slate-600">
-                        <thead class="bg-slate-50 text-slate-800 text-xs uppercase font-bold border-b border-slate-200">
-                            <tr>
-                                <th class="p-4">Timestamp</th>
-                                <th class="p-4">User</th>
-                                <th class="p-4">Action</th>
-                                <th class="p-4">Description / Entity</th>
-                                <th class="p-4">Changes</th>
-                                <th class="p-4">Hash</th>
-                            </tr>
-                        </thead>
-                        <tbody id="audit-tbody" class="divide-y divide-slate-100"></tbody>
-                    </table>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-slate-900">Account Directory</h2>
+                            <p class="text-sm text-slate-500">All active and inactive NIRIKSHAN accounts.</p>
+                        </div>
+                        <button data-section="accounts" class="jump-accounts px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold">Create account</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead><tr class="border-b text-left text-xs uppercase text-slate-500"><th class="p-3">Name</th><th class="p-3">Email</th><th class="p-3">Role</th><th class="p-3">Division</th><th class="p-3">Status</th></tr></thead>
+                            <tbody id="overview-users"></tbody>
+                        </table>
+                    </div>
                 </div>
-            </div>
+            </section>
+
+            <section id="section-accounts" class="admin-section hidden space-y-6">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <div class="mb-6">
+                        <h2 class="text-xl font-bold text-slate-900">Create Account</h2>
+                        <p class="text-sm text-slate-500 mt-1">Every account gets its own email + password. Role is stored server-side and controls the dashboard.</p>
+                    </div>
+                    <form id="account-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input id="acc_first" class="border border-slate-300 p-3 rounded-lg" placeholder="First name">
+                        <input id="acc_last" class="border border-slate-300 p-3 rounded-lg" placeholder="Last name">
+                        <input id="acc_email" type="email" required class="border border-slate-300 p-3 rounded-lg" placeholder="Email address">
+                        <input id="acc_phone" class="border border-slate-300 p-3 rounded-lg" placeholder="Phone (optional)">
+                        <select id="acc_role" required class="border border-slate-300 p-3 rounded-lg">
+                            <option value="">Select account type</option>
+                            <option value="super_admin">Super Admin / Admin</option>
+                            <option value="official">Official</option>
+                            <option value="inspector">Inspector</option>
+                            <option value="ngo">NGO</option>
+                            <option value="nss_volunteer">NSS / Field Volunteer</option>
+                            <option value="citizen">Citizen</option>
+                        </select>
+                        <select id="acc_division" class="border border-slate-300 p-3 rounded-lg"><option value="">Select division</option></select>
+                        <select id="acc_ngo" class="border border-slate-300 p-3 rounded-lg"><option value="">Select NGO (only for NGO account)</option></select>
+                        <input id="acc_password" type="password" minlength="8" required class="border border-slate-300 p-3 rounded-lg" placeholder="Password (minimum 8 characters)">
+                        <input id="acc_password2" type="password" minlength="8" required class="border border-slate-300 p-3 rounded-lg" placeholder="Confirm password">
+                        <button type="submit" class="md:col-span-2 bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700">Create Account</button>
+                    </form>
+                    <div id="account-message" class="hidden mt-4 p-3 rounded-lg text-sm font-semibold"></div>
+                </div>
+
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                        <div><h2 class="text-xl font-bold text-slate-900">All Accounts</h2><p class="text-sm text-slate-500">Use the role and division columns to verify access setup.</p></div>
+                        <input id="account-search" class="border border-slate-300 p-2.5 rounded-lg" placeholder="Search name or email">
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead><tr class="border-b text-left text-xs uppercase text-slate-500"><th class="p-3">Name</th><th class="p-3">Email</th><th class="p-3">Role</th><th class="p-3">Division</th><th class="p-3">NGO</th><th class="p-3">Status</th></tr></thead>
+                            <tbody id="accounts-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-audit" class="admin-section hidden">
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                        <div><h2 class="text-xl font-bold text-slate-900">System Audit Log</h2><p class="text-sm text-slate-500">Immutable application activity recorded by NIRIKSHAN.</p></div>
+                        <button onclick="verifyAuditChain()" class="px-4 py-2 rounded-lg bg-slate-900 text-white font-semibold">Verify Chain</button>
+                    </div>
+                    <div id="audit-banner" class="hidden mb-4 p-4 rounded-lg font-semibold"></div>
+                    <div class="flex flex-col md:flex-row gap-3 mb-5">
+                        <input type="date" id="audit-start" class="border border-slate-300 p-2.5 rounded-lg">
+                        <input type="date" id="audit-end" class="border border-slate-300 p-2.5 rounded-lg">
+                        <button onclick="loadAuditLogs()" class="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold">Filter</button>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead><tr class="border-b text-left text-xs uppercase text-slate-500"><th class="p-3">Time</th><th class="p-3">User</th><th class="p-3">Action</th><th class="p-3">Description</th><th class="p-3">Hash</th></tr></thead>
+                            <tbody id="audit-tbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
         </div>
     </main>
 </div>
 
 <script>
-    Auth.requireRole('super_admin');
+Auth.requireRole('super_admin');
 
-    function showSection(sectionId) {
-        document.querySelectorAll('.content-section').forEach(el => el.classList.add('hidden'));
-        document.getElementById('sec-' + sectionId).classList.remove('hidden');
-        document.querySelectorAll('.nav-link').forEach(el => {
-            el.classList.remove('bg-blue-600', 'text-white');
-            el.classList.add('text-slate-300', 'hover:bg-slate-800');
-        });
-        const activeLink = document.querySelector(`a[onclick="showSection('${sectionId}')"]`);
-        if(activeLink) {
-            activeLink.classList.remove('text-slate-300', 'hover:bg-slate-800');
-            activeLink.classList.add('bg-blue-600', 'text-white');
+let allAccounts = [];
+
+function asList(data) {
+    if (Array.isArray(data)) return data;
+    if (data && Array.isArray(data.results)) return data.results;
+    return [];
+}
+
+async function readJson(response) {
+    const text = await response.text();
+    let data = {};
+    try { data = text ? JSON.parse(text) : {}; } catch (_) { data = { detail: text || 'Server returned an invalid response.' }; }
+    if (!response.ok) throw new Error(data.detail || data.message || ('Request failed (' + response.status + ')'));
+    return data;
+}
+
+function showMessage(id, message, ok = false) {
+    const el = document.getElementById(id);
+    el.textContent = message;
+    el.className = 'mt-4 p-3 rounded-lg text-sm font-semibold ' + (ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700');
+    el.classList.remove('hidden');
+}
+
+function showGlobal(message, ok = false) {
+    const el = document.getElementById('global-message');
+    el.textContent = message;
+    el.className = 'mb-6 p-4 rounded-lg text-sm font-semibold ' + (ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700');
+    el.classList.remove('hidden');
+}
+
+function setSection(section) {
+    document.querySelectorAll('.admin-section').forEach(el => el.classList.add('hidden'));
+    document.getElementById('section-' + section).classList.remove('hidden');
+    document.querySelectorAll('.admin-nav').forEach(el => {
+        el.classList.remove('bg-blue-600', 'text-white');
+        el.classList.add('text-slate-300');
+        if (el.dataset.section === section) {
+            el.classList.add('bg-blue-600', 'text-white');
+            el.classList.remove('text-slate-300');
         }
-    }
+    });
+    if (section === 'accounts') loadAccountOptions();
+    if (section === 'audit') loadAuditLogs();
+}
 
-    async function loadAuditLogs() {
+document.querySelectorAll('.admin-nav').forEach(btn => btn.addEventListener('click', () => setSection(btn.dataset.section)));
+document.querySelectorAll('.jump-accounts').forEach(btn => btn.addEventListener('click', () => setSection('accounts')));
+
+function roleLabel(role) {
+    return ({
+        super_admin: 'Super Admin', official: 'Official', inspector: 'Inspector',
+        ngo: 'NGO', nss_volunteer: 'NSS Volunteer', citizen: 'Citizen'
+    })[role] || role || '—';
+}
+
+function renderAccounts() {
+    const q = (document.getElementById('account-search').value || '').toLowerCase();
+    const rows = allAccounts.filter(u => ((u.first_name || '') + ' ' + (u.last_name || '') + ' ' + (u.email || '')).toLowerCase().includes(q));
+    const html = rows.length ? rows.map(u => {
+        const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || '—';
+        return '<tr class="border-b border-slate-100"><td class="p-3 font-semibold">' + name + '</td><td class="p-3">' + (u.email || '—') + '</td><td class="p-3">' + roleLabel(u.role) + '</td><td class="p-3">' + (u.division_name || '—') + '</td><td class="p-3">' + (u.ngo_name || '—') + '</td><td class="p-3"><span class="px-2 py-1 rounded-full text-xs bg-emerald-50 text-emerald-700">Active</span></td></tr>';
+    }).join('') : '<tr><td colspan="6" class="p-6 text-center text-slate-400">No accounts found.</td></tr>';
+    document.getElementById('accounts-tbody').innerHTML = html;
+    document.getElementById('overview-users').innerHTML = rows.slice(0, 10).map(u => {
+        const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || '—';
+        return '<tr class="border-b border-slate-100"><td class="p-3 font-semibold">' + name + '</td><td class="p-3">' + (u.email || '—') + '</td><td class="p-3">' + roleLabel(u.role) + '</td><td class="p-3">' + (u.division_name || '—') + '</td><td class="p-3">Active</td></tr>';
+    }).join('') || '<tr><td colspan="5" class="p-6 text-center text-slate-400">No accounts found.</td></tr>';
+}
+
+async function loadOverview() {
+    try {
+        const [usersRes, ngosRes, projectsRes] = await Promise.all([
+            Auth.fetchWithAuth('/api/users/'),
+            Auth.fetchWithAuth('/api/ngos/'),
+            Auth.fetchWithAuth('/api/projects/')
+        ]);
+        allAccounts = asList(await readJson(usersRes));
+        const ngos = asList(await readJson(ngosRes));
+        const projects = asList(await readJson(projectsRes));
+        document.getElementById('stat-users').textContent = allAccounts.length;
+        document.getElementById('stat-officials').textContent = allAccounts.filter(u => u.role === 'official').length;
+        document.getElementById('stat-inspectors').textContent = allAccounts.filter(u => u.role === 'inspector').length;
+        document.getElementById('stat-ngos').textContent = ngos.length;
+        document.getElementById('stat-projects').textContent = projects.length;
+        renderAccounts();
+    } catch (e) {
+        showGlobal('Unable to load admin data: ' + e.message);
+    }
+}
+
+async function loadAccountOptions() {
+    try {
+        const [divRes, ngoRes] = await Promise.all([Auth.fetchWithAuth('/api/divisions/'), Auth.fetchWithAuth('/api/ngos/')]);
+        const divisions = asList(await readJson(divRes));
+        const ngos = asList(await readJson(ngoRes));
+        const d = document.getElementById('acc_division');
+        const n = document.getElementById('acc_ngo');
+        d.innerHTML = '<option value="">Select division</option>' + divisions.map(x => '<option value="' + x.id + '">' + x.name + '</option>').join('');
+        n.innerHTML = '<option value="">Select NGO (only for NGO account)</option>' + ngos.map(x => '<option value="' + x.id + '" data-division="' + x.division + '">' + x.name + ' (' + x.registration_number + ')</option>').join('');
+    } catch (e) {
+        showMessage('account-message', 'Could not load divisions/NGOs: ' + e.message);
+    }
+}
+
+document.getElementById('acc_role').addEventListener('change', e => {
+    const role = e.target.value;
+    const division = document.getElementById('acc_division');
+    const ngo = document.getElementById('acc_ngo');
+    division.required = ['official', 'inspector'].includes(role);
+    ngo.required = role === 'ngo';
+    ngo.disabled = role !== 'ngo';
+    division.disabled = role === 'super_admin' || role === 'nss_volunteer' || role === 'citizen';
+});
+
+document.getElementById('account-search').addEventListener('input', renderAccounts);
+
+document.getElementById('account-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const password = document.getElementById('acc_password').value;
+    const password2 = document.getElementById('acc_password2').value;
+    if (password !== password2) return showMessage('account-message', 'Passwords do not match.');
+    const payload = {
+        first_name: document.getElementById('acc_first').value.trim(),
+        last_name: document.getElementById('acc_last').value.trim(),
+        email: document.getElementById('acc_email').value.trim(),
+        phone: document.getElementById('acc_phone').value.trim(),
+        role: document.getElementById('acc_role').value,
+        division: document.getElementById('acc_division').value || null,
+        ngo: document.getElementById('acc_ngo').value || null,
+        password: password
+    };
+    try {
+        const res = await Auth.fetchWithAuth('/api/users/create-account/', { method: 'POST', body: JSON.stringify(payload) });
+        await readJson(res);
+        showMessage('account-message', 'Account created successfully. The user can now log in with email + password.', true);
+        e.target.reset();
+        document.getElementById('acc_ngo').disabled = true;
+        document.getElementById('acc_division').disabled = false;
+        await loadOverview();
+    } catch (err) {
+        showMessage('account-message', err.message);
+    }
+});
+
+async function loadAuditLogs() {
+    try {
+        let url = '/api/audit-logs/?';
         const start = document.getElementById('audit-start').value;
         const end = document.getElementById('audit-end').value;
-        let url = '/api/audit-logs/?';
-        if (start) url += `start_date=${start}&`;
-        if (end) url += `end_date=${end}T23:59:59&`;
-
-        try {
-            const res = await Auth.fetchWithAuth(url);
-            const data = await res.json();
-            const tbody = document.getElementById('audit-tbody');
-            tbody.innerHTML = '';
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="p-4 text-center text-slate-400">No audit logs found.</td></tr>';
-                return;
-            }
-            data.forEach(log => {
-                let changes = '-';
-                if(log.field_name) {
-                    changes = `<div class="text-[10px]"><span class="text-slate-500">${log.field_name}:</span> <span class="text-red-500 line-through">${log.old_value}</span> <span class="text-emerald-600 font-bold">?? ${log.new_value}</span></div>`;
-                }
-                let entity = log.model_name ? `<div class="text-[10px] text-slate-400 mt-1 uppercase font-bold">${log.model_name} #${log.object_id}</div>` : '';
-                tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition border-b border-slate-100">
-                        <td class="p-4 whitespace-nowrap text-xs">${new Date(log.timestamp).toLocaleString()}</td>
-                        <td class="p-4 font-bold text-sm">${log.username || 'System'} <span class="text-[10px] text-slate-400 block uppercase">${log.role || ''}</span></td>
-                        <td class="p-4"><span class="bg-indigo-100 text-indigo-800 px-2 py-1 text-[10px] rounded uppercase font-bold tracking-wider">${log.action}</span></td>
-                        <td class="p-4 text-sm">${log.description || ''} ${entity}</td>
-                        <td class="p-4 font-mono text-xs max-w-xs">${changes}</td>
-                        <td class="p-4 font-mono text-[10px] text-slate-400 max-w-[100px] truncate" title="${log.current_hash}">${log.current_hash.substring(0,16)}...</td>
-                    </tr>`;
-            });
-        } catch(e) {
-            console.error(e);
-            alert('Failed to load audit logs');
-        }
+        if (start) url += 'start_date=' + encodeURIComponent(start) + '&';
+        if (end) url += 'end_date=' + encodeURIComponent(end + 'T23:59:59') + '&';
+        const data = asList(await readJson(await Auth.fetchWithAuth(url)));
+        const tbody = document.getElementById('audit-tbody');
+        tbody.innerHTML = data.length ? data.map(log => '<tr class="border-b border-slate-100"><td class="p-3 whitespace-nowrap">' + new Date(log.timestamp).toLocaleString() + '</td><td class="p-3 font-semibold">' + (log.username || 'System') + '</td><td class="p-3">' + (log.action || '—') + '</td><td class="p-3">' + (log.description || '—') + '</td><td class="p-3 font-mono text-xs">' + ((log.current_hash || '').slice(0, 16) || '—') + '</td></tr>').join('') : '<tr><td colspan="5" class="p-6 text-center text-slate-400">No audit logs found.</td></tr>';
+    } catch (e) {
+        document.getElementById('audit-tbody').innerHTML = '<tr><td colspan="5" class="p-6 text-center text-red-500">' + e.message + '</td></tr>';
     }
+}
 
-    async function verifyAuditChain() {
-        const banner = document.getElementById('audit-verify-banner');
-        banner.className = 'mb-6 p-4 rounded-lg font-bold text-lg bg-blue-50 text-blue-800';
-        banner.innerHTML = 'Verifying cryptographic chain...';
-        banner.classList.remove('hidden');
-
-        try {
-            const res = await Auth.fetchWithAuth('/api/audit-logs/verify_chain/');
-            const data = await res.json();
-            if (data.status === 'VALID') {
-                banner.className = 'mb-6 p-4 rounded-lg font-bold text-lg bg-emerald-100 text-emerald-800 border border-emerald-200';
-                banner.innerHTML = `?? VALID: ${data.records_verified} records cryptographically verified. No tampering detected.`;
-            } else {
-                banner.className = 'mb-6 p-4 rounded-lg font-bold text-lg bg-red-100 text-red-800 border border-red-200';
-                banner.innerHTML = `?? FAILED: Chain compromised at entry #${data.tampering_detected_at}. Reason: ${data.reason}`;
-            }
-        } catch(e) {
-            banner.className = 'mb-6 p-4 rounded-lg font-bold text-lg bg-red-100 text-red-800';
-            banner.innerHTML = 'Network error during verification.';
+async function verifyAuditChain() {
+    const banner = document.getElementById('audit-banner');
+    banner.textContent = 'Verifying audit chain...';
+    banner.className = 'mb-4 p-4 rounded-lg font-semibold bg-blue-50 text-blue-700';
+    banner.classList.remove('hidden');
+    try {
+        const data = await readJson(await Auth.fetchWithAuth('/api/audit-logs/verify_chain/'));
+        if (data.status === 'VALID') {
+            banner.textContent = 'VALID — ' + data.records_verified + ' records verified.';
+            banner.className = 'mb-4 p-4 rounded-lg font-semibold bg-emerald-50 text-emerald-700';
+        } else {
+            banner.textContent = 'FAILED — tampering detected at entry #' + data.tampering_detected_at + '. ' + (data.reason || '');
+            banner.className = 'mb-4 p-4 rounded-lg font-semibold bg-red-50 text-red-700';
         }
+    } catch (e) {
+        banner.textContent = 'Verification failed: ' + e.message;
+        banner.className = 'mb-4 p-4 rounded-lg font-semibold bg-red-50 text-red-700';
     }
+}
 
+async function refreshAll() {
+    await loadOverview();
+    const active = document.querySelector('.admin-section:not(.hidden)');
+    if (active && active.id === 'section-audit') await loadAuditLogs();
+}
 
-    async function loadAccountOptions() {
-        try {
-            const [divRes, ngoRes] = await Promise.all([Auth.fetchWithAuth('/api/divisions/'), Auth.fetchWithAuth('/api/ngos/')]);
-            const divisions = await divRes.json();
-            const ngos = await ngoRes.json();
-            document.getElementById('acc_division').innerHTML = '<option value="">Select division</option>' + divisions.map(d => '<option value="'+d.id+'">'+d.name+'</option>').join('');
-            document.getElementById('acc_ngo').innerHTML = '<option value="">Select NGO (for NGO account)</option>' + ngos.map(n => '<option value="'+n.id+'">'+n.name+' ('+n.registration_number+')</option>').join('');
-        } catch (e) { console.error(e); }
-    }
-
-    document.getElementById('accountForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const msg = document.getElementById('account-message');
-        msg.className = 'mb-4 p-3 rounded-lg text-sm font-medium bg-blue-50 text-blue-700';
-        msg.textContent = 'Creating account...';
-        msg.classList.remove('hidden');
-        if (document.getElementById('acc_password').value !== document.getElementById('acc_password2').value) {
-            msg.className = 'mb-4 p-3 rounded-lg text-sm font-medium bg-red-50 text-red-700'; msg.textContent = 'Passwords do not match.'; return;
-        }
-        try {
-            const res = await Auth.fetchWithAuth('/api/users/create-account/', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
-                first_name:document.getElementById('acc_first').value.trim(), last_name:document.getElementById('acc_last').value.trim(), email:document.getElementById('acc_email').value.trim(), phone:document.getElementById('acc_phone').value.trim(), role:document.getElementById('acc_role').value, division:document.getElementById('acc_division').value || null, ngo:document.getElementById('acc_ngo').value || null, password:document.getElementById('acc_password').value
-            })});
-            const data = await res.json();
-            if (!res.ok) throw new Error(data.detail || 'Unable to create account.');
-            msg.className = 'mb-4 p-3 rounded-lg text-sm font-medium bg-emerald-50 text-emerald-700'; msg.textContent = 'Account created successfully for '+data.user.email+'.';
-            document.getElementById('accountForm').reset();
-        } catch(e) { msg.className = 'mb-4 p-3 rounded-lg text-sm font-medium bg-red-50 text-red-700'; msg.textContent = e.message; }
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {\n        loadAccountOptions();
-        loadAuditLogs();
-    });
+setSection('overview');
+refreshAll();
 </script>
 {% endblock %}
