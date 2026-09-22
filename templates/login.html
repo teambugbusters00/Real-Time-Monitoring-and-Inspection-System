@@ -135,8 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('access_token', data.access);
             localStorage.setItem('refresh_token', data.refresh);
             localStorage.setItem('role', data.role);
-            if (data.division_id) localStorage.setItem('division_id', data.division_id);
-            if (data.ngo_id) localStorage.setItem('ngo_id', data.ngo_id);
+            localStorage.removeItem('division_id');
+            localStorage.removeItem('ngo_id');
+            if (data.division_id !== null && data.division_id !== undefined) localStorage.setItem('division_id', data.division_id);
+            if (data.ngo_id !== null && data.ngo_id !== undefined) localStorage.setItem('ngo_id', data.ngo_id);
 
             switch (data.role) {
                 case 'super_admin': window.location.href = '/dashboard/admin/'; break;
