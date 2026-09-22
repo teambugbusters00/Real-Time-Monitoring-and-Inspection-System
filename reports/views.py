@@ -43,6 +43,15 @@ class InspectionReportViewSet(viewsets.ModelViewSet):
         return InspectionReport.objects.none()
 
     def create(self, request, *args, **kwargs):
+        if request.user.role not in ('inspector', 'super_admin'):
+            return Response({'detail': 'Only assigned Inspectors or Super Admins can create inspection reports.'}, status=status.HTTP_403_FORBIDDEN)
+        inspection_id = request.data.get('inspection')
+        try:
+            inspection = __import__('inspections.models', fromlist=['Inspection']).Inspection.objects.get(pk=inspection_id)
+        except (TypeError, ValueError, __import__('inspections.models', fromlist=['Inspection']).Inspection.DoesNotExist):
+            return Response({'detail': 'Inspection not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if request.user.role == 'inspector' and not inspection.inspectionassignment_set.filter(inspector=request.user).exists():
+            return Response({'detail': 'You are not assigned to this inspection.'}, status=status.HTTP_403_FORBIDDEN)
         client_submission_id = request.data.get('client_submission_id')
         if client_submission_id:
             existing = InspectionReport.objects.filter(client_submission_id=client_submission_id).first()
@@ -53,6 +62,10 @@ class InspectionReportViewSet(viewsets.ModelViewSet):
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
+        if request.user.role == 'inspector' and not instance.inspection.inspectionassignment_set.filter(inspector=request.user).exists():
+            return Response({'detail': 'You are not assigned to this inspection.'}, status=status.HTTP_403_FORBIDDEN)
+        if request.user.role not in ('inspector', 'super_admin'):
+            return Response({'detail': 'Only assigned Inspectors or Super Admins can edit inspection reports.'}, status=status.HTTP_403_FORBIDDEN)
         if instance.status == 'finalized':
             from accounts.models import AuditLog
             from accounts.middleware import get_current_user
@@ -86,6 +99,10 @@ class InspectionReportViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def evidence(self, request, pk=None):
         report = self.get_object()
+        if request.user.role not in ('inspector', 'super_admin'):
+            return Response({'detail': 'Only assigned Inspectors or Super Admins can upload evidence.'}, status=status.HTTP_403_FORBIDDEN)
+        if request.user.role == 'inspector' and not report.inspection.inspectionassignment_set.filter(inspector=request.user).exists():
+            return Response({'detail': 'You are not assigned to this inspection.'}, status=status.HTTP_403_FORBIDDEN)
         if report.status == 'finalized':
             return Response({"error": "Cannot add evidence to a finalized report."}, status=status.HTTP_400_BAD_REQUEST)
             
@@ -445,6 +462,28 @@ class NGOPeriodicReportViewSet(viewsets.ModelViewSet):
     serializer_class = NGOPeriodicReportSerializer
     permission_classes = [IsAuthenticated]
 
+    def create(self, request, *args, **kwargs):
+        if request.user.role != 'ngo':
+            return Response({'detail': 'Only NGO accounts can submit periodic NGO reports.'}, status=status.HTTP_403_FORBIDDEN)
+        project_id = request.data.get('project')
+        try:
+            project = __import__('projects.models', fromlist=['Project']).Project.objects.get(pk=project_id)
+        except (TypeError, ValueError, __import__('projects.models', fromlist=['Project']).Project.DoesNotExist):
+            return Response({'detail': 'Project not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if project.ngo_id != request.user.ngo_id:
+            return Response({'detail': 'Project does not belong to your NGO.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        if request.user.role not in ('official', 'super_admin'):
+            return Response({'detail': 'Only Officials or Super Admins can review NGO reports.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        if request.user.role not in ('official', 'super_admin'):
+            return Response({'detail': 'Only Officials or Super Admins can review NGO reports.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().partial_update(request, *args, **kwargs)
+
     def get_queryset(self):
         user = self.request.user
         if not user.is_authenticated:
@@ -568,6 +607,18 @@ class NSSVisitReportViewSet(viewsets.ModelViewSet):
     serializer_class = NSSVisitReportSerializer
     permission_classes = [IsAuthenticated]
     parser_classes = [MultiPartParser, FormParser]
+
+    def create(self, request, *args, **kwargs):
+        if request.user.role != 'nss_volunteer':
+            return Response({'detail': 'Only NSS Volunteers can submit visit reports.'}, status=status.HTTP_403_FORBIDDEN)
+        project_id = request.data.get('project')
+        try:
+            project = __import__('projects.models', fromlist=['Project']).Project.objects.get(pk=project_id)
+        except (TypeError, ValueError, __import__('projects.models', fromlist=['Project']).Project.DoesNotExist):
+            return Response({'detail': 'Project not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if project.division_id != request.user.division_id:
+            return Response({'detail': 'Project is outside your division.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
 
     def get_queryset(self):
         user = self.request.user
