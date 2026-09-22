@@ -41,7 +41,7 @@ from django.views.generic import TemplateView, RedirectView
 
 from accounts.views import CustomTokenObtainPairView, DivisionViewSet, NGOViewSet, UserViewSet, NGOLoginView
 
-from accounts.views import LogoutView, GoogleLoginView, GoogleClientConfigView
+from accounts.views import LogoutView, GoogleLoginView, GoogleClientConfigView, UserRegistrationView
 from django.conf import settings
 from django.conf.urls.static import static
 from projects.views import PublicProjectListView
@@ -53,6 +53,7 @@ urlpatterns = [
     # Frontend Routes
     path('', TemplateView.as_view(template_name='landing.html'), name='landing_page'),
     path('login/', TemplateView.as_view(template_name='login.html'), name='login_page'),
+    path('register/', TemplateView.as_view(template_name='register.html'), name='register_page'),
     path('dashboard/admin/', TemplateView.as_view(template_name='dashboards/admin.html'), name='admin_dashboard'),
     path('dashboard/official/', TemplateView.as_view(template_name='dashboards/official.html'), name='official_dashboard'),
     path('dashboard/inspector/', TemplateView.as_view(template_name='dashboards/inspector.html'), name='inspector_dashboard'),
@@ -69,6 +70,7 @@ urlpatterns = [
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),
     path('api/auth/google/', GoogleLoginView.as_view(), name='google_login'),
     path('api/auth/google/config/', GoogleClientConfigView.as_view(), name='google_config'),
+    path('api/auth/register/', UserRegistrationView.as_view(), name='user_register'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/beneficiary/me/', BeneficiaryMeView.as_view(), name='beneficiary_me'),
     path('api/beneficiary/complaints/', BeneficiaryComplaintView.as_view(), name='beneficiary_complaint'),
