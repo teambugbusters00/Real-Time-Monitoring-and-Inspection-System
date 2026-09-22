@@ -8,7 +8,7 @@ from accounts.views import CustomTokenObtainPairView, DivisionViewSet, NGOViewSe
 from rest_framework_simplejwt.views import TokenRefreshView
 
 from reports.views import InspectionReportViewSet, NGOPeriodicReportViewSet, AnomalyViewSet
-from projects.views import ProjectViewSet, ComplaintViewSet, BeneficiaryMeView, BeneficiaryComplaintView
+from projects.views import ProjectViewSet, ComplaintViewSet, BeneficiaryMeView, BeneficiaryComplaintView, CCTVCameraViewSet
 from inspections.views import InspectionViewSet, DutySwapRequestViewSet
 from accounts.views import LeaveApplicationViewSet, InspectorActivityLogViewSet
 
@@ -18,6 +18,7 @@ router.register(r'ngos', NGOViewSet, basename='ngo')
 router.register(r'users', UserViewSet, basename='user')
 router.register(r'inspector-activity', InspectorActivityLogViewSet, basename='inspector-activity')
 router.register(r'projects', ProjectViewSet, basename='project')
+router.register(r'cctv-cameras', CCTVCameraViewSet, basename='cctv-camera')
 router.register(r'inspections', InspectionViewSet, basename='inspection')
 router.register(r'reports', InspectionReportViewSet, basename='report')
 router.register(r'complaints', ComplaintViewSet, basename='complaint')
