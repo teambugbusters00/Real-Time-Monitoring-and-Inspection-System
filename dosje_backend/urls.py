@@ -41,7 +41,7 @@ from django.views.generic import TemplateView, RedirectView
 
 from accounts.views import CustomTokenObtainPairView, DivisionViewSet, NGOViewSet, UserViewSet, NGOLoginView
 
-from accounts.views import LogoutView, GoogleLoginView, GoogleClientConfigView, UserRegistrationView
+from accounts.views import LogoutView, GoogleLoginView, GoogleClientConfigView, UserRegistrationView, GeminiChatView
 from django.conf import settings
 from django.conf.urls.static import static
 from projects.views import PublicProjectListView
@@ -71,6 +71,7 @@ urlpatterns = [
     path('api/auth/google/', GoogleLoginView.as_view(), name='google_login'),
     path('api/auth/google/config/', GoogleClientConfigView.as_view(), name='google_config'),
     path('api/auth/register/', UserRegistrationView.as_view(), name='user_register'),
+    path('api/ai/chat/', GeminiChatView.as_view(), name='gemini_chat'),
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/beneficiary/me/', BeneficiaryMeView.as_view(), name='beneficiary_me'),
     path('api/beneficiary/complaints/', BeneficiaryComplaintView.as_view(), name='beneficiary_complaint'),
