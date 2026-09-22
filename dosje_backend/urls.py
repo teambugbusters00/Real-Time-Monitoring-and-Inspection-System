@@ -67,7 +67,7 @@ urlpatterns = [
     # One application login page for every NIRIKSHAN role.
     # Keep Django's raw admin separately available at /django-admin/.
     path('django-admin/', admin.site.urls),
-    re_path(r'^admin(?:/.*)?
+    path('admin/', RedirectView.as_view(url='/login/', permanent=False)),
     path('api/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/login-beneficiary/', BeneficiaryLoginView.as_view(), name='login_beneficiary'),
     path('api/auth/logout/', LogoutView.as_view(), name='logout'),
