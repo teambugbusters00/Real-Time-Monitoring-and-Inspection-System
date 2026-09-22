@@ -435,6 +435,60 @@ class NGOPeriodicReportViewSet(viewsets.ModelViewSet):
 from .serializers import AnomalySerializer
 
 class AnomalyViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read anomalies and run a deterministic risk scan over finalized reports."""
+
+    @action(detail=False, methods=['post'])
+    def scan(self, request):
+        if request.user.role not in ['official', 'super_admin']:
+            return Response({'error': 'Only Officials or Super Admins can run anomaly scans.'}, status=403)
+
+        if request.user.role == 'official':
+            reports = InspectionReport.objects.filter(
+                status='finalized',
+                inspection__project__division=request.user.division
+            ).select_related('inspection__project')
+        else:
+            reports = InspectionReport.objects.filter(status='finalized').select_related('inspection__project')
+
+        created = 0
+        updated = 0
+        for report in reports:
+            project = report.inspection.project
+
+            if report.fund_utilized_verified is not None:
+                claimed = project.fund_utilized_claimed or 0
+                gap = abs(report.fund_utilized_verified - claimed)
+                if gap > 0.01:
+                    severity = 'high' if claimed and gap / claimed >= 0.20 else 'medium'
+                    _, was_created = Anomaly.objects.update_or_create(
+                        report=report, type='fund_mismatch',
+                        defaults={
+                            'description': f'Claimed utilization ₹{claimed} differs from verified utilization ₹{report.fund_utilized_verified}.',
+                            'severity': severity
+                        }
+                    )
+                    created += int(was_created)
+                    updated += int(not was_created)
+
+            if report.ghost_beneficiaries_count > 0:
+                severity = 'high' if report.ghost_beneficiaries_count >= 5 else 'medium'
+                _, was_created = Anomaly.objects.update_or_create(
+                    report=report, type='ghost_beneficiary',
+                    defaults={
+                        'description': f'{report.ghost_beneficiaries_count} claimed beneficiaries were not verified.',
+                        'severity': severity
+                    }
+                )
+                created += int(was_created)
+                updated += int(not was_created)
+
+        return Response({
+            'scanned_reports': reports.count(),
+            'anomalies_created': created,
+            'anomalies_updated': updated,
+        })
+
+
     serializer_class = AnomalySerializer
     permission_classes = [IsAuthenticated]
 
