@@ -93,6 +93,10 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             return Response({'detail': 'A valid email address is required.'}, status=status.HTTP_400_BAD_REQUEST)
         if len(password) < 8:
             return Response({'detail': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            validate_password(password)
+        except ValidationError as exc:
+            return Response({'detail': ' '.join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
         if User.objects.filter(email__iexact=email).exists():
             return Response({'detail': 'An account with this email already exists.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -153,6 +157,65 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             object_id=user.id,
         )
         return Response({'detail': 'Account created successfully.', 'user': UserSerializer(user).data}, status=status.HTTP_201_CREATED)
+
+    @action(detail=False, methods=['post'], url_path='manage-account')
+    def manage_account(self, request):
+        if request.user.role != 'super_admin':
+            return Response({'detail': 'Only a Super Admin can manage accounts.'}, status=status.HTTP_403_FORBIDDEN)
+
+        account_id = request.data.get('user_id')
+        action_name = (request.data.get('action') or '').strip()
+        try:
+            target = User.objects.get(pk=account_id)
+        except (User.DoesNotExist, TypeError, ValueError):
+            return Response({'detail': 'Account not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if target.pk == request.user.pk and action_name in ('deactivate', 'change_role'):
+            return Response({'detail': 'You cannot deactivate or change the role of your own Super Admin account.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if action_name == 'reset_password':
+            new_password = request.data.get('new_password') or ''
+            if len(new_password) < 8:
+                return Response({'detail': 'Password must be at least 8 characters.'}, status=status.HTTP_400_BAD_REQUEST)
+            try:
+                validate_password(new_password, target)
+            except ValidationError as exc:
+                return Response({'detail': ' '.join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
+            target.set_password(new_password)
+            target.save(update_fields=['password'])
+            AuditLog.log_event(user=request.user, action='account_password_reset', description=f'Password reset for {target.email}.', model_name='User', object_id=target.id)
+            return Response({'detail': 'Password reset successfully.'})
+
+        if action_name == 'deactivate':
+            if target.role == 'super_admin' and User.objects.filter(role='super_admin', is_active=True).count() <= 1:
+                return Response({'detail': 'At least one active Super Admin must remain.'}, status=status.HTTP_400_BAD_REQUEST)
+            target.is_active = False
+            target.save(update_fields=['is_active'])
+            AuditLog.log_event(user=request.user, action='account_deactivated', description=f'Deactivated account {target.email}.', model_name='User', object_id=target.id)
+            return Response({'detail': 'Account deactivated.'})
+
+        if action_name == 'activate':
+            target.is_active = True
+            target.save(update_fields=['is_active'])
+            AuditLog.log_event(user=request.user, action='account_activated', description=f'Activated account {target.email}.', model_name='User', object_id=target.id)
+            return Response({'detail': 'Account activated.'})
+
+        if action_name == 'change_role':
+            new_role = (request.data.get('role') or '').strip()
+            if new_role not in {choice[0] for choice in User.ROLE_CHOICES}:
+                return Response({'detail': 'Invalid account role.'}, status=status.HTTP_400_BAD_REQUEST)
+            if target.role == 'super_admin' and new_role != 'super_admin' and User.objects.filter(role='super_admin', is_active=True).count() <= 1:
+                return Response({'detail': 'At least one active Super Admin must remain.'}, status=status.HTTP_400_BAD_REQUEST)
+            target.role = new_role
+            target.is_staff = new_role == 'super_admin'
+            target.is_superuser = new_role == 'super_admin'
+            if new_role != 'ngo':
+                target.ngo = None
+            target.save(update_fields=['role', 'is_staff', 'is_superuser', 'ngo'])
+            AuditLog.log_event(user=request.user, action='account_role_changed', description=f'Changed {target.email} role to {target.get_role_display()}.', model_name='User', object_id=target.id)
+            return Response({'detail': 'Account role updated.', 'user': UserSerializer(target).data})
+
+        return Response({'detail': 'Unsupported account action.'}, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=False, methods=['get'])
     def available_inspectors(self, request):
