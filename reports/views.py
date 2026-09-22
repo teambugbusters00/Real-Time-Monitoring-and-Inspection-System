@@ -388,15 +388,41 @@ class InspectionReportViewSet(viewsets.ModelViewSet):
         previous_hash = "0"
 
         for block in blocks:
-            # Check previous hash link
+            # Check previous hash link.
             if block.previous_hash != previous_hash:
                 return Response({
-                    "verified": False, 
-                    "broken_at_index": block.index, 
+                    "verified": False,
+                    "broken_at_index": block.index,
                     "reason": "Previous hash link mismatch"
                 })
-            
-            # Recompute block hash
+
+            # Recompute the report fingerprint from the live database record.
+            # This catches edits to funds, beneficiaries, findings, or anomalies
+            # even when the database row itself is still valid.
+            report = block.report
+            report_data = {
+                "id": report.id,
+                "inspection_id": report.inspection.id,
+                "findings": report.findings,
+                "fund_utilized_verified": str(report.fund_utilized_verified) if report.fund_utilized_verified else None,
+                "beneficiaries_claimed_count": report.beneficiaries_claimed_count,
+                "beneficiaries_verified_count": report.beneficiaries_verified_count,
+                "ghost_beneficiaries_count": report.ghost_beneficiaries_count,
+                "anomalies": list(report.anomaly_set.values('type', 'description', 'severity')),
+            }
+            live_report_hash = hashlib.sha256(
+                json.dumps(report_data, sort_keys=True).encode('utf-8')
+            ).hexdigest()
+
+            if block.report_hash != live_report_hash:
+                return Response({
+                    "verified": False,
+                    "broken_at_index": block.index,
+                    "report_id": report.id,
+                    "reason": "Inspection report data fingerprint mismatch — report data was modified after finalization"
+                })
+
+            # Recompute block hash.
             timestamp_str = str(int(block.timestamp.timestamp()))
             block_content = f"{block.index}{block.report_hash}{block.previous_hash}{timestamp_str}"
             recomputed_hash = hashlib.sha256(block_content.encode('utf-8')).hexdigest()
