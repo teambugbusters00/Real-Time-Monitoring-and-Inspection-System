@@ -20,7 +20,11 @@ class InspectionViewSet(viewsets.ModelViewSet):
         from .models import RandomVerificationEvent
         import uuid
         
+        if request.user.role not in ('official', 'super_admin'):
+            return Response({'error': 'Only Officials or Super Admins can initiate a verification call.'}, status=403)
         inspection = self.get_object()
+        if request.user.role == 'official' and inspection.project.division_id != request.user.division_id:
+            return Response({'error': 'Inspection is outside your division.'}, status=403)
         
         if inspection.status != 'in_progress':
             return Response({'error': 'Inspection is not active.'}, status=400)
@@ -60,6 +64,8 @@ class InspectionViewSet(viewsets.ModelViewSet):
         # 1. Gather Context
         if not request.user.is_authenticated:
             return Response({"error": "Not authenticated"}, status=401)
+        if request.user.role not in ('super_admin', 'official'):
+            return Response({"error": "Only Officials or Super Admins can auto-schedule inspections."}, status=403)
             
         if request.user.role == 'super_admin':
             projects = Project.objects.filter(status='active')
@@ -343,8 +349,15 @@ Return ONLY valid JSON (no markdown block, no extra text) as a list of objects w
     @action(detail=True, methods=['get'], url_path='live-location')
     def live_location(self, request, pk=None):
         inspection = self.get_object()
+        if request.user.role == 'inspector':
+            if not inspection.inspectionassignment_set.filter(inspector=request.user).exists():
+                return Response({'error': 'You are not assigned to this inspection.'}, status=403)
+        elif request.user.role == 'official':
+            if inspection.project.division_id != request.user.division_id:
+                return Response({'error': 'Inspection is outside your division.'}, status=403)
+        elif request.user.role != 'super_admin':
+            return Response({'error': 'Live inspector location is restricted.'}, status=403)
 
-        # Anyone with access to the inspection can view live location (e.g. officials/super_admin)
         from .models import InspectorLocationPing
         latest_ping = InspectorLocationPing.objects.filter(inspection=inspection).order_by('-timestamp').first()
 
