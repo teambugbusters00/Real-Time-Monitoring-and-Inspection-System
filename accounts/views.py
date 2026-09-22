@@ -313,6 +313,83 @@ class BeneficiaryLoginView(APIView):
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
 
+class DemoAuthView(APIView):
+    """
+    Demo-only authentication bypass for presentations/testing.
+    Enabled only when DEMO_AUTH_MODE=true. Never use it for production access control.
+    """
+    permission_classes = []
+
+    DEMO_ROLES = ('super_admin', 'official', 'inspector', 'ngo', 'nss_volunteer')
+
+    def post(self, request):
+        if not getattr(settings, 'DEMO_AUTH_MODE', False):
+            return Response({'detail': 'Demo authentication is disabled.'}, status=status.HTTP_404_NOT_FOUND)
+
+        email = (request.data.get('email') or '').strip().lower()
+        password = request.data.get('password') or ''
+        role = (request.data.get('role') or 'nss_volunteer').strip()
+
+        if not email or not password:
+            return Response({'detail': 'Email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if '@' not in email:
+            return Response({'detail': 'Enter any demo email address.'}, status=status.HTTP_400_BAD_REQUEST)
+        if role not in self.DEMO_ROLES:
+            return Response({'detail': 'Invalid demo role.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Reuse/create a demo account so all existing role-based APIs continue to work.
+        username_base = ''.join(ch for ch in email.split('@')[0].lower() if ch.isalnum() or ch in '._-')[:120] or 'demo'
+        username = f"demo_{username_base}"
+        suffix = 1
+        while User.objects.filter(username=username).exclude(email=email).exists():
+            suffix += 1
+            username = f"demo_{username_base}_{suffix}"
+
+        user = User.objects.filter(email__iexact=email, username=username).first()
+        if user is None:
+            user = User.objects.filter(username=username).first()
+
+        division = Division.objects.order_by('id').first()
+        ngo = NGO.objects.filter(division=division).order_by('id').first() if division else NGO.objects.order_by('id').first()
+
+        if user is None:
+            user = User(username=username, email=email, first_name='Demo', last_name=role.replace('_', ' ').title(),
+                        role=role, division=division, ngo=ngo if role == 'ngo' else None, is_active=True)
+        else:
+            user.email = email
+            user.role = role
+            user.division = division
+            user.ngo = ngo if role == 'ngo' else None
+            user.is_active = True
+
+        user.set_password(password)
+        user.save()
+
+        refresh = RefreshToken.for_user(user)
+        AuditLog.log_event(
+            user=user,
+            action='demo_login',
+            description=f'Demo authentication used for role {role}.',
+            model_name='User',
+            object_id=user.id,
+        )
+
+        if role == 'inspector':
+            InspectorActivityLog.objects.filter(inspector=user, is_active=True).update(
+                is_active=False, logout_time=timezone.now()
+            )
+            InspectorActivityLog.objects.create(inspector=user)
+
+        return Response({
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+            'role': user.role,
+            'division_id': user.division.id if user.division else None,
+            'ngo_id': user.ngo.id if user.ngo else None,
+            'demo_mode': True,
+        }, status=status.HTTP_200_OK)
+
+
 class GoogleLoginView(APIView):
     """
     Accept a Google Identity Services ID token and exchange it for
