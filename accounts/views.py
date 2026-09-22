@@ -98,37 +98,6 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
-class NGOLoginView(APIView):
-    permission_classes = []
-
-    def post(self, request):
-        ngo_name = request.data.get('ngo_name')
-        registration_number = request.data.get('registration_number')
-
-        if not ngo_name or not registration_number:
-            return Response({'detail': 'ngo_name and registration_number are required.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            ngo = NGO.objects.get(name=ngo_name, registration_number=registration_number)
-            user = User.objects.get(ngo=ngo, role='ngo')
-            
-            refresh = RefreshToken.for_user(user)
-            
-            from .models import AuditLog
-            AuditLog.log_event(user=user, action="ngo_login", description=f"NGO {ngo_name} logged in.", model_name="User", object_id=user.id)
-            
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'role': user.role,
-                'division_id': user.division.id if user.division else None,
-                'ngo_id': user.ngo.id if user.ngo else None
-            }, status=status.HTTP_200_OK)
-        except NGO.DoesNotExist:
-            return Response({'detail': 'Invalid NGO credentials.'}, status=status.HTTP_401_UNAUTHORIZED)
-        except User.DoesNotExist:
-            return Response({'detail': 'No user account linked to this NGO.'}, status=status.HTTP_401_UNAUTHORIZED)
-
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -315,83 +284,6 @@ class BeneficiaryLoginView(APIView):
 
 from google.oauth2 import id_token
 from google.auth.transport import requests as google_requests
-
-class DemoAuthView(APIView):
-    """
-    Demo-only authentication bypass for presentations/testing.
-    Enabled only when DEMO_AUTH_MODE=true. Never use it for production access control.
-    """
-    permission_classes = []
-
-    DEMO_ROLES = ('super_admin', 'official', 'inspector', 'ngo', 'nss_volunteer')
-
-    def post(self, request):
-        if not getattr(settings, 'DEMO_AUTH_MODE', False):
-            return Response({'detail': 'Demo authentication is disabled.'}, status=status.HTTP_404_NOT_FOUND)
-
-        email = (request.data.get('email') or '').strip().lower()
-        password = request.data.get('password') or ''
-        role = (request.data.get('role') or 'nss_volunteer').strip()
-
-        if not email or not password:
-            return Response({'detail': 'Email and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
-        if '@' not in email:
-            return Response({'detail': 'Enter any demo email address.'}, status=status.HTTP_400_BAD_REQUEST)
-        if role not in self.DEMO_ROLES:
-            return Response({'detail': 'Invalid demo role.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # Reuse/create a demo account so all existing role-based APIs continue to work.
-        username_base = ''.join(ch for ch in email.split('@')[0].lower() if ch.isalnum() or ch in '._-')[:120] or 'demo'
-        username = f"demo_{username_base}"
-        suffix = 1
-        while User.objects.filter(username=username).exclude(email=email).exists():
-            suffix += 1
-            username = f"demo_{username_base}_{suffix}"
-
-        user = User.objects.filter(email__iexact=email, username=username).first()
-        if user is None:
-            user = User.objects.filter(username=username).first()
-
-        division = Division.objects.order_by('id').first()
-        ngo = NGO.objects.filter(division=division).order_by('id').first() if division else NGO.objects.order_by('id').first()
-
-        if user is None:
-            user = User(username=username, email=email, first_name='Demo', last_name=role.replace('_', ' ').title(),
-                        role=role, division=division, ngo=ngo if role == 'ngo' else None, is_active=True)
-        else:
-            user.email = email
-            user.role = role
-            user.division = division
-            user.ngo = ngo if role == 'ngo' else None
-            user.is_active = True
-
-        user.set_password(password)
-        user.save()
-
-        refresh = RefreshToken.for_user(user)
-        AuditLog.log_event(
-            user=user,
-            action='demo_login',
-            description=f'Demo authentication used for role {role}.',
-            model_name='User',
-            object_id=user.id,
-        )
-
-        if role == 'inspector':
-            InspectorActivityLog.objects.filter(inspector=user, is_active=True).update(
-                is_active=False, logout_time=timezone.now()
-            )
-            InspectorActivityLog.objects.create(inspector=user)
-
-        return Response({
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'role': user.role,
-            'division_id': user.division.id if user.division else None,
-            'ngo_id': user.ngo.id if user.ngo else None,
-            'demo_mode': True,
-        }, status=status.HTTP_200_OK)
-
 
 class GoogleLoginView(APIView):
     """
@@ -605,51 +497,61 @@ from django.db import IntegrityError
 
 class UserRegistrationView(APIView):
     """
-    Public self-registration for new NIRIKSHAN field users.
-    Privileged roles (official/inspector/admin/NGO) remain admin-provisioned.
+    Public self-registration using the same email/password credentials as login.
+    New public accounts are NSS volunteers; privileged roles are provisioned by administrators.
     """
     permission_classes = []
 
     def post(self, request):
-        username = (request.data.get('username') or '').strip()
         first_name = (request.data.get('first_name') or '').strip()
         last_name = (request.data.get('last_name') or '').strip()
         email = (request.data.get('email') or '').strip().lower()
-        phone = (request.data.get('phone') or '').strip()
         password = request.data.get('password') or ''
         confirm_password = request.data.get('confirm_password') or ''
 
-        if not username or not first_name or not email or not phone or not password:
+        if not email or not password:
             return Response(
-                {'detail': 'Username, first name, email, phone and password are required.'},
+                {'detail': 'Email and password are required.'},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        if len(username) < 4:
-            return Response({'detail': 'Username must be at least 4 characters.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not email or '@' not in email:
-            return Response({'detail': 'Enter a valid email address.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if not phone.isdigit() or len(phone) != 10:
-            return Response({'detail': 'Enter a valid 10-digit phone number.'}, status=status.HTTP_400_BAD_REQUEST)
+        if '@' not in email:
+            return Response(
+                {'detail': 'Enter a valid email address.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if password != confirm_password:
-            return Response({'detail': 'Passwords do not match.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        if User.objects.filter(username__iexact=username).exists():
-            return Response({'detail': 'Username is already registered.'}, status=status.HTTP_409_CONFLICT)
+            return Response(
+                {'detail': 'Passwords do not match.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         if User.objects.filter(email__iexact=email).exists():
-            return Response({'detail': 'Email is already registered.'}, status=status.HTTP_409_CONFLICT)
-
-        if User.objects.filter(phone=phone).exists():
-            return Response({'detail': 'Phone number is already registered.'}, status=status.HTTP_409_CONFLICT)
+            return Response(
+                {'detail': 'Email is already registered. Please sign in with that email.'},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         try:
             validate_password(password)
         except ValidationError as exc:
-            return Response({'detail': ' '.join(exc.messages)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {'detail': ' '.join(exc.messages)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Username remains an internal Django identifier. Users never need to
+        # know it; their email is the login identifier.
+        local_part = email.split('@', 1)[0]
+        username_base = ''.join(
+            ch for ch in local_part.lower() if ch.isalnum() or ch in '._-'
+        )[:120] or 'user'
+        username = username_base
+        suffix = 1
+        while User.objects.filter(username=username).exists():
+            suffix += 1
+            username = f'{username_base}_{suffix}'
 
         try:
             user = User.objects.create_user(
@@ -657,24 +559,30 @@ class UserRegistrationView(APIView):
                 email=email,
                 first_name=first_name,
                 last_name=last_name,
-                phone=phone,
                 role='nss_volunteer',
                 is_active=True,
             )
             user.set_password(password)
             user.save(update_fields=['password'])
         except IntegrityError:
-            return Response({'detail': 'Unable to create account. Please try another username or email.'}, status=status.HTTP_409_CONFLICT)
+            return Response(
+                {'detail': 'Unable to create account. Please try again with another email.'},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         AuditLog.log_event(
             user=user,
             action='user_registration',
-            description=f'New NIRIKSHAN user {user.username} registered.',
+            description=f'New NIRIKSHAN account registered for {user.email}.',
             model_name='User',
             object_id=user.id,
         )
 
-        return Response({
-            'detail': 'Account created successfully. Please sign in with your new username and password.',
-            'username': user.username,
-        }, status=status.HTTP_201_CREATED)
+        return Response(
+            {
+                'detail': 'Account created successfully. Please sign in with your email and password.',
+                'email': user.email,
+                'role': user.role,
+            },
+            status=status.HTTP_201_CREATED,
+        )
