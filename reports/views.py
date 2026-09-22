@@ -1,6 +1,7 @@
 import hashlib
 import json
 from django.utils import timezone
+from django.db.models import Sum
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -126,6 +127,9 @@ class InspectionReportViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['patch'])
     def finalize(self, request, pk=None):
         report = self.get_object()
+
+        if request.user.role not in ['inspector', 'super_admin']:
+            return Response({"error": "Only the assigned Inspector or Super Admin can finalize an inspection report."}, status=status.HTTP_403_FORBIDDEN)
         
         if report.status == 'finalized':
             return Response({"error": "Report is already finalized."}, status=status.HTTP_400_BAD_REQUEST)
@@ -158,6 +162,42 @@ class InspectionReportViewSet(viewsets.ModelViewSet):
                 return Response({"error": "Invalid beneficiary verification count format"}, status=status.HTTP_400_BAD_REQUEST)
 
         report.ghost_beneficiaries_count = max(0, report.beneficiaries_claimed_count - report.beneficiaries_verified_count)
+
+        # Deterministic anomaly checks complement the AI analysis.
+        # They are generated from the submitted verified values and the project's
+        # own records, so an AI outage cannot hide a material discrepancy.
+        if report.fund_utilized_verified is not None:
+            claimed_fund = project.fund_utilized_claimed or Decimal('0')
+            fund_gap = abs(Decimal(str(report.fund_utilized_verified)) - Decimal(str(claimed_fund)))
+            if fund_gap > Decimal('0.01'):
+                severity = 'high' if claimed_fund and (fund_gap / claimed_fund) >= Decimal('0.20') else 'medium'
+                Anomaly.objects.update_or_create(
+                    report=report, type='fund_mismatch',
+                    defaults={
+                        'description': f'Claimed utilization ₹{claimed_fund} differs from verified utilization ₹{report.fund_utilized_verified}.',
+                        'severity': severity
+                    }
+                )
+
+        if report.ghost_beneficiaries_count > 0:
+            severity = 'high' if report.ghost_beneficiaries_count >= 5 else 'medium'
+            Anomaly.objects.update_or_create(
+                report=report, type='ghost_beneficiary',
+                defaults={
+                    'description': f'{report.ghost_beneficiaries_count} claimed beneficiaries were not verified during inspection.',
+                    'severity': severity
+                }
+            )
+
+        total_disbursed = project.disbursements.aggregate(total=Sum('amount')).get('total') or Decimal('0')
+        if report.fund_utilized_verified is not None and total_disbursed > Decimal(str(report.fund_utilized_verified)) + Decimal('0.01'):
+            Anomaly.objects.update_or_create(
+                report=report, type='fund_mismatch',
+                defaults={
+                    'description': f'Logged beneficiary disbursements ₹{total_disbursed} exceed verified utilization ₹{report.fund_utilized_verified}.',
+                    'severity': 'high'
+                }
+            )
         
 
         # NEW INSPECTION MODULE LOGIC
