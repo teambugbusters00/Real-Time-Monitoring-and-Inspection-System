@@ -1,0 +1,40 @@
+name: Django CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  django-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Django system check
+        env:
+          DEBUG: "False"
+          SECRET_KEY: ci-only-secret-key
+          DATABASE_URL: sqlite:///ci.sqlite3
+          ALLOWED_HOSTS: localhost,127.0.0.1
+        run: python manage.py check
+
+      - name: Check migrations
+        env:
+          DEBUG: "False"
+          SECRET_KEY: ci-only-secret-key
+          DATABASE_URL: sqlite:///ci.sqlite3
+          ALLOWED_HOSTS: localhost,127.0.0.1
+        run: python manage.py makemigrations --check --dry-run
