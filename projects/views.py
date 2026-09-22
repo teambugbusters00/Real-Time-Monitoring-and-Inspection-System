@@ -61,11 +61,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
         return super().update(request, *args, **kwargs)
 
     def perform_update(self, serializer):
-        project = serializer.validated_data.get('project', serializer.instance)
-        if project.division_id != project.ngo.division_id:
+        division = serializer.validated_data.get('division', serializer.instance.division)
+        ngo = serializer.validated_data.get('ngo', serializer.instance.ngo)
+        if division.id != ngo.division_id:
             from rest_framework.exceptions import ValidationError
             raise ValidationError({'detail': 'Project division must match the NGO division.'})
-        if self.request.user.role == 'official' and project.division_id != self.request.user.division_id:
+        if self.request.user.role == 'official' and division.id != self.request.user.division_id:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Project is outside your division.')
         serializer.save()
