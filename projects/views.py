@@ -134,7 +134,7 @@ class CCTVCameraViewSet(viewsets.ModelViewSet):
         try:
             value = signer.unsign(token or '', max_age=300)
             user_id, camera_id = value.split(':', 1)
-            if str(camera.id) != camera_id:
+            if str(camera.id) != camera_id or str(request.user.id) != user_id:
                 raise BadSignature('Camera token mismatch')
         except (BadSignature, SignatureExpired, ValueError):
             return Response({'error': 'Invalid or expired CCTV stream token.'}, status=403)
@@ -255,6 +255,13 @@ class CCTVCameraViewSet(viewsets.ModelViewSet):
         if self.request.user.role not in ['super_admin', 'official', 'ngo']:
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Only officials, super admins, or the owning NGO can edit cameras.')
+        project = serializer.validated_data.get('project', serializer.instance.project)
+        if self.request.user.role == 'official' and project.division_id != self.request.user.division_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Camera project is outside your division.')
+        if self.request.user.role == 'ngo' and project.ngo_id != self.request.user.ngo_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Camera project does not belong to your NGO.')
         serializer.save()
 
 
