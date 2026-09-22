@@ -27,6 +27,37 @@ class ProjectViewSet(viewsets.ModelViewSet):
             return Project.objects.filter(ngo=user.ngo)
         return Project.objects.none()
 
+    def _can_manage(self, user, project=None):
+        if user.role == 'super_admin':
+            return True
+        if user.role == 'official' and project is not None:
+            return project.division_id == user.division_id
+        if user.role == 'official' and project is None:
+            return True
+        return False
+
+    def create(self, request, *args, **kwargs):
+        if request.user.role not in ('super_admin', 'official'):
+            return Response({'detail': 'Only Super Admins and Officials can create projects.'}, status=403)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        project = self.get_object()
+        if not self._can_manage(request.user, project):
+            return Response({'detail': 'You do not have permission to edit this project.'}, status=403)
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        project = self.get_object()
+        if not self._can_manage(request.user, project):
+            return Response({'detail': 'You do not have permission to edit this project.'}, status=403)
+        return super().partial_update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if request.user.role != 'super_admin':
+            return Response({'detail': 'Only Super Admins can delete projects.'}, status=403)
+        return super().destroy(request, *args, **kwargs)
+
     @action(detail=True, methods=['get', 'post'])
     def beneficiaries(self, request, pk=None):
         project = self.get_object()
@@ -35,7 +66,12 @@ class ProjectViewSet(viewsets.ModelViewSet):
             serializer = BeneficiarySerializer(beneficiaries, many=True)
             return Response(serializer.data)
         elif request.method == 'POST':
-            # Create beneficiary
+            if request.user.role not in ('super_admin', 'official', 'ngo'):
+                return Response({'detail': 'Only Super Admins, Officials, or the owning NGO can add beneficiaries.'}, status=403)
+            if request.user.role == 'official' and project.division_id != request.user.division_id:
+                return Response({'detail': 'Project is outside your division.'}, status=403)
+            if request.user.role == 'ngo' and project.ngo_id != request.user.ngo_id:
+                return Response({'detail': 'Project does not belong to your NGO.'}, status=403)
             data = request.data.copy()
             data['project'] = project.id
             serializer = BeneficiarySerializer(data=data)
@@ -52,6 +88,10 @@ class ProjectViewSet(viewsets.ModelViewSet):
             serializer = PurposeItemSerializer(items, many=True)
             return Response(serializer.data)
         elif request.method == 'POST':
+            if request.user.role not in ('super_admin', 'official'):
+                return Response({'detail': 'Only Super Admins or Officials can manage project purpose items.'}, status=403)
+            if request.user.role == 'official' and project.division_id != request.user.division_id:
+                return Response({'detail': 'Project is outside your division.'}, status=403)
             data = request.data.copy()
             data['project'] = project.id
             serializer = PurposeItemSerializer(data=data)
@@ -236,11 +276,31 @@ class BeneficiaryViewSet(viewsets.ModelViewSet):
         return Beneficiary.objects.none()
 
     def perform_create(self, serializer):
+        if self.request.user.role not in ('super_admin', 'official', 'ngo'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only Super Admins, Officials, or the owning NGO can add beneficiaries.')
+        project = serializer.validated_data.get('project')
+        if self.request.user.role == 'official' and project.division_id != self.request.user.division_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Project is outside your division.')
+        if self.request.user.role == 'ngo' and project.ngo_id != self.request.user.ngo_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Project does not belong to your NGO.')
         ben = serializer.save()
         from accounts.models import AuditLog
         AuditLog.log_event(user=self.request.user, action='beneficiary_added', description=f"Beneficiary {ben.name} added to Project #{ben.project_id}.", model_name='Beneficiary', object_id=ben.id, project=ben.project)
 
     def perform_update(self, serializer):
+        if self.request.user.role not in ('super_admin', 'official', 'ngo'):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Only Super Admins, Officials, or the owning NGO can edit beneficiaries.')
+        ben_existing = serializer.instance
+        if self.request.user.role == 'official' and ben_existing.project.division_id != self.request.user.division_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Project is outside your division.')
+        if self.request.user.role == 'ngo' and ben_existing.project.ngo_id != self.request.user.ngo_id:
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Project does not belong to your NGO.')
         ben = serializer.save()
         from accounts.models import AuditLog
         AuditLog.log_event(user=self.request.user, action='beneficiary_updated', description=f"Beneficiary {ben.name} updated.", model_name='Beneficiary', object_id=ben.id, project=ben.project)
