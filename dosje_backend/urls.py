@@ -64,10 +64,37 @@ urlpatterns = [
     path('dashboard/beneficiary/', TemplateView.as_view(template_name='dashboards/beneficiary.html'), name='beneficiary_dashboard'),
 
     # API Routes
-    # NIRIKSHAN's supported admin surface is the role-based Super Admin portal.
-    # Keep Django's raw admin available separately for emergency/advanced use.
+    # One application login page for every NIRIKSHAN role.
+    # Keep Django's raw admin separately available at /django-admin/.
     path('django-admin/', admin.site.urls),
-    re_path(r'^admin(?:/.*)?$', RedirectView.as_view(url='/dashboard/admin/', permanent=False)),
+    re_path(r'^admin(?:/.*)?
+    path('api/public/projects/', PublicProjectListView.as_view(), name='public_projects'),
+    path('api/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path('api/auth/login-beneficiary/', BeneficiaryLoginView.as_view(), name='login_beneficiary'),
+    path('api/auth/logout/', LogoutView.as_view(), name='logout'),
+    path('api/auth/google/', GoogleLoginView.as_view(), name='google_login'),
+    path('api/auth/google/config/', GoogleClientConfigView.as_view(), name='google_config'),
+    path('api/auth/register/', UserRegistrationView.as_view(), name='user_register'),
+    path('api/ai/chat/', GeminiChatView.as_view(), name='gemini_chat'),
+    path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('api/beneficiary/me/', BeneficiaryMeView.as_view(), name='beneficiary_me'),
+    path('api/beneficiary/complaints/', BeneficiaryComplaintView.as_view(), name='beneficiary_complaint'),
+    path('api/', include(router.urls)),
+]
+
+from django.views.static import serve
+from django.conf import settings
+
+if not settings.DEBUG:
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+        re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATIC_ROOT}),
+    ]
+else:
+    from django.conf.urls.static import static
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+, RedirectView.as_view(url='/login/', permanent=False)),
     path('api/public/projects/', PublicProjectListView.as_view(), name='public_projects'),
     path('api/auth/login/', CustomTokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/auth/login-beneficiary/', BeneficiaryLoginView.as_view(), name='login_beneficiary'),
