@@ -597,10 +597,8 @@ class DirectCallViewSet(viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Only Officials can initiate NGO calls.')
         ngo = serializer.validated_data.get('ngo')
-        if not ngo or ngo.role != 'ngo' or ngo.ngo_id != self.request.user.division_id:
-            # NGO.user is linked to an NGO whose division must match the official.
-            if not ngo or ngo.role != 'ngo' or not ngo.ngo or ngo.ngo.division_id != self.request.user.division_id:
-                raise PermissionDenied('NGO is outside your division.')
+        if not ngo or ngo.role != 'ngo' or not ngo.ngo or ngo.ngo.division_id != self.request.user.division_id:
+            raise PermissionDenied('NGO is outside your division.')
         import uuid
         room_name = f"dosje-direct-{uuid.uuid4().hex[:16]}"
         serializer.save(official=self.request.user, room_name=room_name, status='ringing')
