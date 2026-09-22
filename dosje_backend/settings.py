@@ -150,3 +150,14 @@ GEMINI_API_KEY = env('GEMINI_API_KEY', default='')
 GEMINI_CHAT_MODEL = env('GEMINI_CHAT_MODEL', default='gemini-3.8-flash')
 GOOGLE_CLIENT_ID = env('GOOGLE_CLIENT_ID', default='')
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 30
+
+# Production transport and browser security. Render terminates TLS at the edge,
+# so Django must trust the forwarded HTTPS scheme.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = env.bool('SECURE_SSL_REDIRECT', default=True)
+SESSION_COOKIE_SECURE = env.bool('SESSION_COOKIE_SECURE', default=True)
+CSRF_COOKIE_SECURE = env.bool('CSRF_COOKIE_SECURE', default=True)
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+X_FRAME_OPTIONS = 'DENY'
+
