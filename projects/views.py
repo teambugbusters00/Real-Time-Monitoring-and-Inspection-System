@@ -520,6 +520,15 @@ class FundDisbursementViewSet(viewsets.ModelViewSet):
             return queryset.filter(project__ngo__division=user.division)
         return queryset
 
+    def update(self, request, *args, **kwargs):
+        return Response({'detail': 'Financial disbursement records are immutable after submission.'}, status=405)
+
+    def partial_update(self, request, *args, **kwargs):
+        return Response({'detail': 'Financial disbursement records are immutable after submission.'}, status=405)
+
+    def destroy(self, request, *args, **kwargs):
+        return Response({'detail': 'Financial disbursement records cannot be deleted.'}, status=405)
+
     def create(self, request, *args, **kwargs):
         user = request.user
         if user.role != 'ngo':
