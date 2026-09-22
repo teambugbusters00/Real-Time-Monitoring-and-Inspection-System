@@ -283,7 +283,7 @@ document.getElementById('account-form').addEventListener('submit', async (e) => 
         password: password
     };
     try {
-        const res = await Auth.fetchWithAuth('/api/users/create-account/', { method: 'POST', body: JSON.stringify(payload) });
+        const res = await Auth.fetchWithAuth('/api/users/create-account/', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
         await readJson(res);
         showMessage('account-message', 'Account created successfully. The user can now log in with email + password.', true);
         e.target.reset();
