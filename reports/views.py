@@ -489,6 +489,39 @@ class AnomalyViewSet(viewsets.ReadOnlyModelViewSet):
         })
 
 
+    @action(detail=True, methods=['post'], url_path='gemini-analyze')
+    def gemini_analyze(self, request, pk=None):
+        if request.user.role not in ['official', 'super_admin']:
+            return Response({'error': 'Only Officials or Super Admins can run Gemini anomaly analysis.'}, status=403)
+        anomaly = self.get_object()
+        report = anomaly.report
+        from .ai_utils import analyze_full_report
+        results = analyze_full_report(report)
+        created = 0
+        for item in results:
+            if not isinstance(item, dict):
+                continue
+            anomaly_type = item.get('type')
+            severity = item.get('severity')
+            if anomaly_type not in dict(Anomaly.TYPE_CHOICES) or severity not in dict(Anomaly.SEVERITY_CHOICES):
+                continue
+            _, was_created = Anomaly.objects.update_or_create(
+                report=report,
+                type=anomaly_type,
+                defaults={
+                    'severity': severity,
+                    'description': f"Gemini analysis: {item.get('reason', 'Evidence-based anomaly detected.')} "
+                                   f"Supporting data: {item.get('data', '')}",
+                }
+            )
+            created += int(was_created)
+        return Response({
+            'report_id': report.id,
+            'engine': 'Gemini',
+            'anomalies_created': created,
+            'findings': results,
+        })
+
     serializer_class = AnomalySerializer
     permission_classes = [IsAuthenticated]
 
