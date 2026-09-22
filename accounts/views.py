@@ -508,6 +508,10 @@ class UserRegistrationView(APIView):
         email = (request.data.get('email') or '').strip().lower()
         password = request.data.get('password') or ''
         confirm_password = request.data.get('confirm_password') or ''
+        account_type = (request.data.get('account_type') or 'nss_volunteer').strip()
+
+        if account_type not in ('nss_volunteer', 'citizen'):
+            return Response({'detail': 'Public registration is available for NSS Volunteer or Citizen accounts.'}, status=status.HTTP_400_BAD_REQUEST)
 
         if not email or not password:
             return Response(
@@ -559,7 +563,7 @@ class UserRegistrationView(APIView):
                 email=email,
                 first_name=first_name,
                 last_name=last_name,
-                role='nss_volunteer',
+                role=account_type,
                 is_active=True,
             )
             user.set_password(password)
