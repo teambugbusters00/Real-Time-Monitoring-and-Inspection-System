@@ -43,13 +43,10 @@
             </div>
         </div>
 
-        <!-- Common User Login -->
+        <!-- Account Type -->
         <div class="flex border-b mb-6">
-            <button id="tab-staff" class="w-1/2 py-2 text-center text-[11px] font-bold text-blue-600 border-b-2 border-blue-600 transition-colors uppercase tracking-wider" onclick="switchTab('staff')">
+            <button id="tab-staff" class="w-full py-2 text-center text-[11px] font-bold text-blue-600 border-b-2 border-blue-600 transition-colors uppercase tracking-wider" onclick="switchTab('staff')">
                 User Login
-            </button>
-            <button id="tab-beneficiary" class="w-1/2 py-2 text-center text-[11px] font-bold text-gray-400 border-b-2 border-transparent hover:text-orange-600 transition-colors uppercase tracking-wider" onclick="switchTab('beneficiary')">
-                Citizen
             </button>
         </div>
 
@@ -64,7 +61,7 @@
                 <input type="email" id="username" placeholder="Enter your registered email"
                     autocomplete="email"
                     class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm" required>
-                <p class="mt-1 text-[10px] text-slate-500">One common login for Official, Inspector, NGO, NSS and Admin accounts.</p>
+                <p class="mt-1 text-[10px] text-slate-500">Use the email and password of the account created for your role. The server automatically applies the account's saved role.</p>
             </div>
             <div>
                 <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="password">Password</label>
@@ -88,23 +85,6 @@
             <span class="text-xs text-slate-500">New user?</span>
             <a href="{% url 'register_page' %}" class="ml-1 text-xs font-bold text-blue-600 hover:text-blue-700">Create an account</a>
         </div>
-
-        <!-- Beneficiary Form -->
-        <form id="loginForm-beneficiary" class="hidden space-y-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="ben_pan">PAN Number</label>
-                <input type="text" id="ben_pan" placeholder="e.g. ABCDE1234F"
-                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all text-sm" required>
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1" for="ben_phone">Phone Number</label>
-                <input type="text" id="ben_phone" placeholder="10-digit mobile number"
-                    class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:bg-white transition-all text-sm" required>
-            </div>
-            <button type="submit" class="w-full px-6 py-3 mt-2 text-white bg-orange-500 rounded-lg hover:bg-orange-600 shadow-md shadow-orange-500/20 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 font-bold transition-all">
-                Login as Beneficiary
-            </button>
-        </form>
 
     </div>
     
@@ -131,17 +111,17 @@
         successDiv.classList.add('hidden');
 
         // Reset all tabs
-        ['staff', 'beneficiary'].forEach(t => {
+        ['staff'].forEach(t => {
             document.getElementById(`tab-${t}`).className = `w-1/4 py-2 text-center text-[11px] font-bold border-b-2 transition-colors uppercase tracking-wider text-gray-400 border-transparent hover:text-${t==='staff'?'blue':t==='ngo'?'teal':t==='nss'?'indigo':'orange'}-600`;
-            const form = document.getElementById(t === 'staff' ? 'loginForm-staff' : 'loginForm-beneficiary');
+            const form = document.getElementById('loginForm-staff');
             form.classList.add('hidden');
         });
 
         // Activate selected tab
-        const color = tab === 'beneficiary' ? 'orange' : 'blue';
+        const color = 'blue';
         document.getElementById(`tab-${tab}`).className = `w-1/4 py-2 text-center text-[11px] font-bold border-b-2 transition-colors uppercase tracking-wider text-${color}-600 border-${color}-600`;
         
-        const activeForm = document.getElementById(tab === 'staff' ? 'loginForm-staff' : 'loginForm-beneficiary');
+        const activeForm = document.getElementById('loginForm-staff');
         activeForm.classList.remove('hidden');
     }
 
@@ -237,18 +217,6 @@
             const password = document.getElementById('password').value;
             handleLoginRequest('/api/auth/login/', { username: email, password });
         });
-
-        document.getElementById('loginForm-beneficiary').addEventListener('submit', (e) => {
-            e.preventDefault();
-            errorDiv.classList.add('hidden');
-            const payload = {
-                pan_number: document.getElementById('ben_pan').value,
-                phone_number: document.getElementById('ben_phone').value
-            };
-            handleLoginRequest('/api/auth/login-beneficiary/', payload);
-        });
-
-
 
         function redirectToDashboard(userRole) {
             switch(userRole) {
