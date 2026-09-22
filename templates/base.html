@@ -32,8 +32,10 @@
                             method: 'POST',
                             keepalive: true,
                             headers: {
-                                'Authorization': `Bearer ${token}`
-                            }
+                                'Authorization': `Bearer ${token}`,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({refresh: localStorage.getItem('refresh_token') || ''})
                         });
                     } catch (e) {
                         console.error("Logout API failed", e);
