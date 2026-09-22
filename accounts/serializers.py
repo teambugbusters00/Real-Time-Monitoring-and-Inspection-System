@@ -4,6 +4,17 @@ from .models import User, Division, NGO, InspectorActivityLog, AuditLog
 
 class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
+        # Common login: users sign in with their registered email and password.
+        # Keep username login compatible for existing accounts/API clients.
+        identifier = (attrs.get('username') or '').strip()
+        if '@' in identifier:
+            try:
+                user = User.objects.get(email__iexact=identifier)
+            except User.DoesNotExist:
+                pass
+            else:
+                attrs['username'] = user.username
+
         data = super().validate(attrs)
 
         # Add extra responses here
