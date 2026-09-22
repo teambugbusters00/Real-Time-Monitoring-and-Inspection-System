@@ -594,13 +594,7 @@ class UserRegistrationView(APIView):
             object_id=user.id,
         )
 
-        refresh = RefreshToken.for_user(user)
-
         return Response({
-            'detail': 'Account created successfully.',
-            'refresh': str(refresh),
-            'access': str(refresh.access_token),
-            'role': user.role,
-            'division_id': None,
-            'ngo_id': None,
+            'detail': 'Account created successfully. Please sign in with your new username and password.',
+            'username': user.username,
         }, status=status.HTTP_201_CREATED)
