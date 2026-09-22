@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block content %}
+<script>Auth.requireRole('citizen');</script>
+<div class="min-h-screen bg-slate-50 text-slate-800">
+<header class="bg-slate-900 text-white px-5 py-4 flex items-center justify-between sticky top-0 z-40 shadow">
+<div><h1 class="font-bold text-lg">NIRIKSHAN Citizen Portal</h1><p class="text-[10px] text-slate-300 uppercase tracking-widest">Scheme Information & Grievance</p></div>
+<button onclick="Auth.logout()" class="text-xs bg-red-600 px-3 py-2 rounded-lg">Logout</button>
+</header>
+<main class="max-w-5xl mx-auto p-4 md:p-8 space-y-6">
+<section class="bg-gradient-to-r from-blue-800 to-indigo-900 text-white rounded-2xl p-6 shadow">
+<h2 class="text-2xl font-bold">Welcome to NIRIKSHAN</h2>
+<p class="text-blue-100 text-sm mt-2">View active welfare schemes and submit a grievance with your registered Citizen account.</p>
+</section>
+<div id="message" class="hidden p-3 rounded-lg text-sm font-semibold"></div>
+<div class="grid md:grid-cols-2 gap-6">
+<section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+<h3 class="font-bold text-lg mb-4">Active Schemes</h3>
+<div id="projects" class="space-y-3"><p class="text-sm text-slate-500">Loading schemes...</p></div>
+</section>
+<section class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+<h3 class="font-bold text-lg mb-4">Lodge a Grievance</h3>
+<form id="complaint-form" class="space-y-4">
+<div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Scheme / Project</label><select id="project" required class="w-full px-3 py-3 rounded-lg border border-slate-200 bg-slate-50"></select></div>
+<div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Subject</label><input id="subject" required maxlength="255" class="w-full px-3 py-3 rounded-lg border border-slate-200 bg-slate-50" placeholder="Brief subject"></div>
+<div><label class="block text-xs font-bold text-slate-500 uppercase mb-1">Description</label><textarea id="description" required rows="5" class="w-full px-3 py-3 rounded-lg border border-slate-200 bg-slate-50" placeholder="Describe your issue"></textarea></div>
+<button id="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg">Submit Grievance</button>
+</form>
+</section>
+</div>
+</main>
+</div>
+<script>
+let projects = [];
+document.addEventListener('DOMContentLoaded', loadProjects);
+async function loadProjects() {
+ try {
+  const res = await fetch(apiUrl('/api/public/projects/'));
+  if (!res.ok) throw new Error('Unable to load schemes.');
+  projects = await res.json();
+  const list=document.getElementById('projects'), select=document.getElementById('project');
+  list.innerHTML=''; select.innerHTML='<option value="">Select a project</option>';
+  projects.forEach(p=>{
+   list.innerHTML += '<div class="p-3 rounded-lg bg-slate-50 border"><div class="font-semibold text-sm">'+escapeHtml(p.title)+'</div><div class="text-xs text-slate-500 mt-1">'+escapeHtml(p.scheme_name||'')+'</div></div>';
+   const o=document.createElement('option'); o.value=p.project_id; o.textContent=p.title; select.appendChild(o);
+  });
+  if(!projects.length) list.innerHTML='<p class="text-sm text-slate-500">No active schemes available.</p>';
+ } catch(e){ showMessage(e.message,true); }
+}
+document.getElementById('complaint-form').addEventListener('submit',async e=>{
+ e.preventDefault();
+ const selected=projects.find(p=>String(p.project_id)===String(document.getElementById('project').value));
+ if(!selected){showMessage('Please select a valid project.',true);return;}
+ const b=document.getElementById('submit'); b.disabled=true; b.textContent='Submitting...';
+ try{
+  const res=await Auth.fetchWithAuth('/api/complaints/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+   project:selected.project_id,ngo:selected.ngo_id,subject:document.getElementById('subject').value.trim(),description:document.getElementById('description').value.trim()
+  })});
+  const data=await res.json();
+  if(!res.ok) throw new Error(data.detail||JSON.stringify(data));
+  document.getElementById('complaint-form').reset();
+  showMessage('Grievance submitted and saved in the NIRIKSHAN database.',false);
+ }catch(err){showMessage(err.message||'Network error.',true)}
+ finally{b.disabled=false;b.textContent='Submit Grievance';}
+});
+function showMessage(m,error){const x=document.getElementById('message');x.textContent=m;x.className='p-3 rounded-lg text-sm font-semibold '+(error?'bg-red-50 text-red-700 border border-red-200':'bg-emerald-50 text-emerald-700 border border-emerald-200');x.classList.remove('hidden')}
+function escapeHtml(v){const d=document.createElement('div');d.textContent=v;return d.innerHTML}
+</script>
+{% endblock %}
